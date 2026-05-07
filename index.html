@@ -290,8 +290,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   </div>
   <div class="tabs" id="tabsBar" style="display:none">
     <div class="tab active" onclick="switchTab('datos',this)">Datos</div>
-    <div class="tab" onclick="switchTab('diario',this)">Diario Clínico</div>
     <div class="tab" onclick="switchTab('odontograma',this)">Odontograma</div>
+    <div class="tab" onclick="switchTab('diario',this)">Diario Clínico</div>
     <div class="tab" onclick="switchTab('tratamientos',this)">Tratamientos</div>
     <div class="tab" onclick="switchTab('pagos',this)">Pagos</div>
     <div class="tab" onclick="switchTab('citas',this)">Citas</div>
@@ -915,7 +915,15 @@ function renderEstadisticas(){
   const totalInc=patients.reduce((s,p)=>s+p.payments.reduce((a,py)=>a+py.amount,0),0);
   const totalEg=egresos.reduce((s,e)=>s+e.monto,0);
   const totalDebt=patients.reduce((s,p)=>{const txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0);return s+Math.max(0,txT-paid);},0);
+  const curMonthName=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][now.getMonth()];
   return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:16px;font-weight:700;color:var(--text)">Estadísticas financieras</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sm" onclick="descargarInformeMensual()" style="background:var(--green);color:#fff;border-color:var(--green)">📥 Informe ${curMonthName}</button>
+      <button class="btn-sm" onclick="resetearMes()" style="color:var(--red);border-color:#fca5a5">🔄 Resetear mes</button>
+    </div>
+  </div>
   <div class="grid4" style="margin-bottom:16px">
     <div class="kpi"><div class="kpi-label">Ingresos totales</div><div class="kpi-val" style="color:var(--green)">$${totalInc}</div></div>
     <div class="kpi"><div class="kpi-label">Egresos totales</div><div class="kpi-val" style="color:var(--red)">$${totalEg}</div></div>
@@ -989,6 +997,121 @@ function renderEstadisticas(){
   </div>`;
 }
 
+function resetearMes(){
+  const now=new Date();
+  const mesNombre=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][now.getMonth()];
+  if(!confirm(`¿Resetear los datos financieros de ${mesNombre} ${now.getFullYear()}?\n\nEsto eliminará:\n• Todos los pagos registrados este mes\n• Todos los egresos de este mes\n\n⚠️ Se recomienda descargar el informe mensual antes de resetear.\n\nEsta acción NO se puede deshacer.`))return;
+  const m=now.getMonth(),y=now.getFullYear();
+  // Remove this month's payments from all patients
+  patients.forEach(p=>{
+    p.payments=p.payments.filter(py=>{
+      const d=new Date(py.date);
+      return!(d.getMonth()===m&&d.getFullYear()===y);
+    });
+  });
+  // Remove this month's egresos
+  egresos=egresos.filter(e=>{
+    const d=new Date(e.fecha);
+    return!(d.getMonth()===m&&d.getFullYear()===y);
+  });
+  save();
+  showPage('estadisticas');
+  alert(`✓ Datos de ${mesNombre} ${y} eliminados correctamente.`);
+}
+
+function descargarInformeMensual(){
+  const now=new Date();
+  const m=now.getMonth(),y=now.getFullYear();
+  const mesNombre=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m];
+  const clinicaNombre=document.getElementById('logoText').textContent;
+  const profesional=document.getElementById('logoProfesional').textContent;
+
+  // Collect monthly data
+  const pagos=[];
+  patients.forEach(p=>{
+    p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y;})
+      .forEach(py=>pagos.push({paciente:p.name,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type}));
+  });
+  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y;});
+  const totalIng=pagos.reduce((s,p)=>s+p.monto,0);
+  const totalEg=egresosM.reduce((s,e)=>s+e.monto,0);
+  const utilidad=totalIng-totalEg;
+
+  // Build HTML report
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Informe ${mesNombre} ${y} — ${clinicaNombre}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#0f172a;font-size:12px}
+    h1{font-size:22px;font-weight:700;color:#0f172a;margin-bottom:4px}
+    .sub{font-size:13px;color:#64748b;margin-bottom:24px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #0f172a}
+    .kpi-row{display:flex;gap:16px;margin-bottom:24px}
+    .kpi{flex:1;padding:14px;border:1px solid #e2e8f0;border-radius:10px}
+    .kpi-label{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+    .kpi-val{font-size:22px;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-bottom:24px}
+    th{background:#f1f5f9;padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+    td{padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px}
+    tr:last-child td{border:none}
+    .section-title{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+    .green{color:#10b981}.red{color:#ef4444}.blue{color:#0ea5e9}
+    .total-row td{font-weight:700;background:#f8fafc}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}
+    @media print{body{padding:20px}}
+  </style></head><body>
+  <div class="header">
+    <div>
+      <h1>${clinicaNombre}</h1>
+      <div class="sub">${profesional} · RUC: ${clinicaRUC||'—'} · ${clinicaDireccion||''}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:18px;font-weight:700;color:#0f172a">INFORME MENSUAL</div>
+      <div style="font-size:14px;color:#64748b;margin-top:4px">${mesNombre} ${y}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">Generado: ${new Date().toLocaleString('es-EC')}</div>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Total ingresos</div><div class="kpi-val green">$${totalIng.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total egresos</div><div class="kpi-val red">$${totalEg.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Utilidad neta</div><div class="kpi-val ${utilidad>=0?'green':'red'}">${utilidad>=0?'+':''}$${utilidad.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Pacientes atendidos</div><div class="kpi-val blue">${[...new Set(pagos.map(p=>p.paciente))].length}</div></div>
+  </div>
+
+  <div class="section-title">💰 Ingresos del mes (${pagos.length} registros)</div>
+  <table>
+    <thead><tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Forma de pago</th><th style="text-align:right">Monto</th></tr></thead>
+    <tbody>
+      ${pagos.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(p=>`
+      <tr><td>${fmtDate(p.fecha)}</td><td>${p.paciente}</td><td>${p.concepto}</td><td>${p.tipo}</td><td style="text-align:right;color:#10b981;font-weight:600">$${p.monto.toFixed(2)}</td></tr>`).join('')}
+      <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL INGRESOS:</td><td style="text-align:right;color:#10b981">$${totalIng.toFixed(2)}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title">📤 Egresos del mes (${egresosM.length} registros)</div>
+  <table>
+    <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th style="text-align:right">Monto</th></tr></thead>
+    <tbody>
+      ${egresosM.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(e=>`
+      <tr><td>${fmtDate(e.fecha)}</td><td>${e.concepto}</td><td>${e.categoria}</td><td>${e.proveedor||'—'}</td><td style="text-align:right;color:#ef4444;font-weight:600">$${e.monto.toFixed(2)}</td></tr>`).join('')}
+      <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL EGRESOS:</td><td style="text-align:right;color:#ef4444">$${totalEg.toFixed(2)}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Informe generado automáticamente por OdontoApp · ${clinicaNombre} · ${mesNombre} ${y}
+  </div>
+  </body></html>`;
+
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`Informe_${mesNombre}_${y}_${clinicaNombre.replace(/\s+/g,'_')}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 function openAddEgreso(){
   openModal(`<div class="modal-title">Registrar egreso</div>
   <div class="form-row form-full"><div class="form-group"><label>Concepto *</label><input id="f_ec" placeholder="Arriendo, materiales, servicios..."></div></div>
@@ -1236,7 +1359,10 @@ function renderDiario(){
       <div class="diary-title">${n.title}</div>
       <div class="diary-body">${n.body}</div>
       ${n.alert?`<div class="diary-alert">⏰ ${n.alert}</div>`:''}
-      <div style="margin-top:6px"><button class="del-btn" onclick="delDiary(${n.id})">Eliminar nota</button></div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn-sm" style="font-size:11px;padding:4px 10px" onclick="openEditDiary(${n.id})">✏️ Editar</button>
+        <button class="del-btn" onclick="delDiary(${n.id})">Eliminar nota</button>
+      </div>
     </div>`).join(''):`<div style="font-size:13px;color:var(--text3);padding:8px 0">Sin notas clínicas registradas.</div>`}
   </div>`;
 }
@@ -1255,10 +1381,31 @@ function saveDiary(){
   curPt.diary.push({id:Date.now(),date:v('f_dd'),time:v('f_dt'),doctor:v('f_ddoc'),title,body,alert:v('f_dalert')});
   save();closeModal();renderTab();
 }
+
+function openEditDiary(id){
+  const n=curPt.diary.find(x=>x.id===id);if(!n)return;
+  openModal(`<div class="modal-title">✏️ Editar nota clínica</div>
+  <div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_dd" type="date" value="${n.date}"></div><div class="form-group"><label>Hora</label><input id="f_dt" type="time" value="${n.time||''}"></div></div>
+  <div class="form-row"><div class="form-group"><label>Título / Procedimiento *</label><input id="f_dtitle" value="${n.title}"></div><div class="form-group"><label>Doctor</label><input id="f_ddoc" value="${n.doctor||''}"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Descripción clínica *</label><textarea id="f_dbody" style="min-height:100px">${n.body}</textarea></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Alerta de seguimiento</label><input id="f_dalert" value="${n.alert||''}"></div></div>
+  <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveEditDiary(${id})">Guardar cambios</button></div>`);
+}
+
+function saveEditDiary(id){
+  const n=curPt.diary.find(x=>x.id===id);if(!n)return;
+  const title=v('f_dtitle').trim(),body=v('f_dbody').trim();
+  if(!title||!body){alert('Completa título y descripción');return;}
+  n.date=v('f_dd');n.time=v('f_dt');n.doctor=v('f_ddoc');n.title=title;n.body=body;n.alert=v('f_dalert');
+  n.editado=new Date().toISOString();
+  save();closeModal();renderTab();
+}
+
 function delDiary(id){if(!confirm('¿Eliminar esta nota?'))return;curPt.diary=curPt.diary.filter(n=>n.id!==id);save();renderTab();}
 
 function renderOdontograma(){
   const p=curPt;
+  if(!p.odoHistory)p.odoHistory=[];
   const groups=ODO_GROUPS.map(g=>`<div class="odo-sec-lbl">${g.label}</div><div class="odo-sec-card"><div class="teeth-row">${g.teeth.map(n=>`<div class="tooth-col"><div class="tooth-num">${n}</div>${buildToothSVG(n,p.surfData,p.wholeData)}</div>`).join('')}</div></div>`).join('');
   const legend=`<div class="odo-legend">
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Simbología oficial</div>
@@ -1267,7 +1414,42 @@ function renderOdontograma(){
     <div style="font-size:10px;color:var(--text3);font-weight:600;margin:8px 0 6px;padding-top:8px;border-top:1px solid var(--border)">Diente completo</div>
     <div class="odo-legend-grid">${ODO_WHOLE.map(c=>`<div class="leg-item">${legSVG(c,false)}<span>${c.label}</span></div>`).join('')}</div>
   </div>`;
-  return groups+legend;
+
+  // Save snapshot button
+  const saveBtn=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:13px;color:var(--text2)">Registra un snapshot del estado actual para llevar historial de la evolución del paciente.</div>
+    <button class="btn-primary" onclick="saveOdoSnapshot()" style="flex-shrink:0;margin-left:14px">📸 Guardar estado actual</button>
+  </div>`;
+
+  // History section
+  const histHtml=p.odoHistory.length===0?`<div class="card"><div class="card-title">Historial del odontograma</div><div style="font-size:13px;color:var(--text3);padding:8px 0">Sin snapshots guardados. Haz clic en "Guardar estado actual" para registrar el estado inicial del paciente.</div></div>`:`
+  <div class="card">
+    <div class="action-row"><div class="card-title" style="margin:0">Historial del odontograma (${p.odoHistory.length} registros)</div></div>
+    ${[...p.odoHistory].reverse().map(snap=>`
+      <div data-snapid="${snap.id}" style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${snap.label}</div>
+            <div style="font-size:11px;color:var(--text3)">${fmtDate(snap.fecha)}${snap.hora?' · '+snap.hora:''}${snap.notas?' · '+snap.notas:''}</div>
+          </div>
+          <button class="btn-sm" style="font-size:11px;padding:4px 12px" onclick="abrirOdoSnapshot(${snap.id})">🔍 Ver completo</button>
+          <button class="del-btn" onclick="delOdoSnapshot(${snap.id})">✕</button>
+        </div>
+        <div style="overflow-x:auto;padding-bottom:4px">
+          ${ODO_GROUPS.map(g=>`
+            <div style="font-size:8px;font-weight:600;color:var(--text3);text-align:center;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px">${g.label}</div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-bottom:8px">
+              ${g.teeth.map(n=>`
+                <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+                  <span style="font-size:7px;color:#4338ca;font-weight:600">${n}</span>
+                  ${buildToothSVGSmall(n,snap.surfData,snap.wholeData)}
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}
+  </div>`;
+
+  return saveBtn+groups+legend+histHtml;
 }
 
 function odoClickZone(e,tooth,zone){
@@ -1289,6 +1471,133 @@ function odoSetSurf(id){delete curPt.wholeData[selOdoTooth];curPt.surfData[selOd
 function odoSetWhole(id){ODO_ZONES.forEach(z=>delete curPt.surfData[selOdoTooth+'_'+z]);curPt.wholeData[selOdoTooth]===id?delete curPt.wholeData[selOdoTooth]:curPt.wholeData[selOdoTooth]=id;save();closeTP();renderTab();}
 function clearTooth(){ODO_ZONES.forEach(z=>delete curPt.surfData[selOdoTooth+'_'+z]);delete curPt.wholeData[selOdoTooth];save();closeTP();renderTab();}
 function closeTP(){document.getElementById('toothPopup').classList.remove('show')}
+
+function saveOdoSnapshot(){
+  openModal(`<div class="modal-title">📸 Guardar estado del odontograma</div>
+  <div class="form-row form-full"><div class="form-group"><label>Etiqueta *</label>
+    <input id="f_snaplbl" placeholder="Ej: Estado inicial, Post extracción, Sesión 2..." value="${curPt.odoHistory&&curPt.odoHistory.length===0?'Estado inicial':'Sesión '+(((curPt.odoHistory||[]).length)+1)}">
+  </div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha</label>
+    <input id="f_snapfecha" type="date" value="${today()}">
+  </div><div class="form-group"><label>Hora</label>
+    <input id="f_snaphora" type="time" value="${new Date().toTimeString().slice(0,5)}">
+  </div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Notas de la sesión</label>
+    <input id="f_snapnotas" placeholder="Ej: Consulta inicial, tratamiento de conducto diente 36...">
+  </div></div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn-primary" onclick="confirmSaveSnapshot()">💾 Guardar snapshot</button>
+  </div>`);
+}
+
+function confirmSaveSnapshot(){
+  const label=v('f_snaplbl').trim();
+  if(!label){alert('Escribe una etiqueta para identificar este estado');return;}
+  if(!curPt.odoHistory)curPt.odoHistory=[];
+  curPt.odoHistory.push({
+    id:Date.now(),
+    label,
+    fecha:v('f_snapfecha'),
+    hora:v('f_snaphora'),
+    notas:v('f_snapnotas'),
+    surfData:JSON.parse(JSON.stringify(curPt.surfData||{})),
+    wholeData:JSON.parse(JSON.stringify(curPt.wholeData||{}))
+  });
+  save();closeModal();renderTab();
+}
+
+function delOdoSnapshot(id){
+  if(!confirm('¿Eliminar este registro del historial?'))return;
+  curPt.odoHistory=curPt.odoHistory.filter(x=>x.id!==id);
+  save();renderTab();
+}
+
+function buildToothSVGSmall(n,surfData,wholeData){
+  // Reuse the full buildToothSVG but at 28px size
+  const S=28,M=2,wo=wholeData[n];
+  let p='';
+  for(const z of ODO_ZONES){
+    const sid=surfData[n+'_'+z];
+    let fill='#ffffff';
+    if(!wo&&sid==='caries')fill='#E24B4A';
+    if(!wo&&sid==='obturado')fill='#185FA5';
+    // Compute zone path at size S
+    const t=S-M,c=S/2;
+    let d='';
+    if(z==='top')    d=`M${M},${M}L${t},${M}L${c},${c}Z`;
+    else if(z==='right')  d=`M${t},${M}L${t},${t}L${c},${c}Z`;
+    else if(z==='bottom') d=`M${t},${t}L${M},${t}L${c},${c}Z`;
+    else if(z==='left')   d=`M${M},${t}L${M},${M}L${c},${c}Z`;
+    else d=`M${c-7},${c-7}L${c+7},${c-7}L${c+7},${c+7}L${c-7},${c+7}Z`;
+    p+=`<path d="${d}" fill="${fill}" stroke="#c8ccda" stroke-width="0.5"/>`;
+  }
+  const wov=wo?`<g style="pointer-events:none">${drawWS(wo,S)}</g>`:'';
+  return`<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" style="display:block"><rect width="${S}" height="${S}" rx="2" fill="#fff"/>${p}<rect x="${M}" y="${M}" width="${S-M*2}" height="${S-M*2}" rx="1" fill="none" stroke="#a8adc0" stroke-width="0.7" style="pointer-events:none"/>${wov}</svg>`;
+}
+
+// Store current snapshot being viewed for the modal
+let _snapViewId=null;
+
+function abrirOdoSnapshot(snapId){
+  const snap=curPt.odoHistory.find(x=>x.id===snapId);
+  if(!snap)return;
+  _snapViewId=snapId;
+
+  const groups=ODO_GROUPS.map(g=>`
+    <div style="font-size:9px;font-weight:700;color:#64748b;text-align:center;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">${g.label}</div>
+    <div style="display:flex;justify-content:center;gap:4px;margin-bottom:12px;flex-wrap:wrap">
+      ${g.teeth.map(n=>`
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span style="font-size:9px;font-weight:600;color:#4338ca">${n}</span>
+          ${buildToothSVG(n,snap.surfData,snap.wholeData)}
+        </div>`).join('')}
+    </div>`).join('');
+
+  const legendHtml=`
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+      ${ODO_SURF.map(c=>`<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)">${legSVG(c,true)}<span>${c.label}</span></div>`).join('')}
+      ${ODO_WHOLE.slice(0,8).map(c=>`<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)">${legSVG(c,false)}<span>${c.label}</span></div>`).join('')}
+    </div>`;
+
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div class="modal-title" style="margin:0">🦷 ${snap.label}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">
+          Paciente: <strong>${curPt.name}</strong> · ${fmtDate(snap.fecha)}${snap.hora?' · '+snap.hora:''}${snap.notas?' · '+snap.notas:''}
+        </div>
+      </div>
+      <button onclick="imprimirOdoSnapshot(${snapId})" class="btn-primary" style="flex-shrink:0;padding:7px 14px;font-size:12px">🖨️ Imprimir</button>
+    </div>
+    <div id="odo-snap-print" style="overflow-x:auto">${groups}</div>
+    ${legendHtml}
+    <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button></div>`);
+  document.querySelector('.modal').style.width='740px';
+}
+
+function imprimirOdoSnapshot(snapId){
+  const snap=curPt.odoHistory.find(x=>x.id===snapId);
+  if(!snap)return;
+  const clinicaNombre=document.getElementById('logoText').textContent;
+  const area=document.getElementById('odo-snap-print');
+  if(!area)return;
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Odontograma — ${snap.label}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;padding:24px;color:#0f172a}
+    h2{font-size:18px;font-weight:700;margin-bottom:4px}
+    .sub{font-size:12px;color:#64748b;margin-bottom:20px}
+    @media print{body{padding:10px}}
+  </style></head><body>
+  <h2>${clinicaNombre} — Odontograma: ${snap.label}</h2>
+  <div class="sub">Paciente: ${curPt.name} · ${fmtDate(snap.fecha)}${snap.hora?' · '+snap.hora:''}${snap.notas?' · '+snap.notas:''}</div>
+  ${area.innerHTML}
+  </body></html>`);
+  w.document.close();
+  setTimeout(()=>{w.print();},500);
+}
 
 function renderTratamientos(){
   const p=curPt,pend=p.treatments.filter(t=>t.status==='pendiente'),done=p.treatments.filter(t=>t.status==='realizado');
