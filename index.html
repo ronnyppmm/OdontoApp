@@ -398,6 +398,15 @@ function ptColor(id){return COLORS[id%COLORS.length]}
 function v(id){return document.getElementById(id)?.value||''}
 function today(){return new Date().toISOString().split('T')[0]}
 function fmtDate(d){if(!d)return'—';const dt=new Date(d+'T12:00');return`${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`}
+function calcAge(birthdate){
+  if(!birthdate)return'—';
+  const hoy=new Date();
+  const nac=new Date(birthdate+'T12:00');
+  let edad=hoy.getFullYear()-nac.getFullYear();
+  const m=hoy.getMonth()-nac.getMonth();
+  if(m<0||(m===0&&hoy.getDate()<nac.getDate()))edad--;
+  return edad;
+}
 function genAutorizacion(){return Array.from({length:49},()=>Math.floor(Math.random()*10)).join('')}
 
 // ═══ STORAGE ═══
@@ -423,6 +432,8 @@ function load(){
   if(p){patients=JSON.parse(p);patients.forEach(pt=>{
     ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
     ['treatments','payments','appointments','diary','images','consents','recetas'].forEach(k=>{if(!pt[k])pt[k]=[];});
+    // Migrate: remove stored age, use calcAge from birthdate
+    if(pt.birthdate&&pt.age!==undefined) delete pt.age;
   });}
   const eg=localStorage.getItem('oa3_eg');if(eg)egresos=JSON.parse(eg);
   const fa=localStorage.getItem('oa3_fact');if(fa)facturas=JSON.parse(fa);
@@ -472,7 +483,7 @@ function renderSidebar(){
   document.getElementById('ptList').innerHTML=patients.filter(p=>p.name.toLowerCase().includes(q)||p.cedula.includes(q)).map(p=>`
     <div class="sb-pt${curPt&&curPt.id===p.id?' active':''}" onclick="selectPt(${p.id})">
       <div class="sb-av" style="background:${ptColor(p.id)}">${initials(p.name)}</div>
-      <div><div class="sb-pt-name">${p.name}</div><div class="sb-pt-meta">${p.age} años</div></div>
+      <div><div class="sb-pt-name">${p.name}</div><div class="sb-pt-meta">${calcAge(p.birthdate)} años</div></div>
     </div>`).join('');
 }
 function filterPts(){renderSidebar()}
@@ -497,7 +508,7 @@ function selectPt(id){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   renderSidebar();
   document.getElementById('ptTitle').textContent=curPt.name;
-  document.getElementById('ptBadge').textContent=`${curPt.age} años · CI ${curPt.cedula}`;
+  document.getElementById('ptBadge').textContent=`${calcAge(curPt.birthdate)} años · CI ${curPt.cedula}`;
   document.getElementById('ptBadge').style.display='inline-flex';
   document.getElementById('topActions').innerHTML=`<button class="btn-sm" onclick="openDeletePt()">Eliminar</button><button class="btn-sm" onclick="editPt()">Editar</button>`;
   document.getElementById('tabsBar').style.display='flex';
@@ -531,10 +542,40 @@ function renderDashboard(){
   const mIncome=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((a,py)=>a+py.amount,0),0);
   const mEgresos=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,e)=>s+e.monto,0);
   const pendTx=patients.reduce((s,p)=>s+p.treatments.filter(t=>t.status==='pendiente').length,0);
+  // Collect all pending invoices across patients
+  const factPend=[];
+  patients.forEach(p=>p.payments.filter(py=>py.factPendiente).forEach(py=>factPend.push({...py,ptName:p.name,ptId:p.id,cedula:p.cedula})));
+  factPend.sort((a,b)=>b.date.localeCompare(a.date));
+
   return`
   <div class="dash-greeting">${greeting} 👋</div>
   <div class="dash-sub">${now.toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'long'})} · ${todayAppts.length} cita${todayAppts.length!==1?'s':''} hoy</div>
-  ${bdToday.length?`<div class="bday-card"><div style="font-size:28px">🎂</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:#92400e">¡${bdToday[0].name} cumple años hoy!</div><div style="font-size:12px;color:#a16207">${bdToday[0].age} años</div></div><button class="btn-sm" onclick="selectPt(${bdToday[0].id})">Ver ficha</button></div>`:''}
+  ${bdToday.length?`<div class="bday-card"><div style="font-size:28px">🎂</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:#92400e">¡${bdToday[0].name} cumple años hoy!</div><div style="font-size:12px;color:#a16207">${calcAge(bdToday[0].birthdate)} años</div></div><button class="btn-sm" onclick="selectPt(${bdToday[0].id})">Ver ficha</button></div>`:''}
+  ${factPend.length?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:14px;padding:16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:24px">🧾</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#92400e">${factPend.length} factura${factPend.length>1?'s':''} pendiente${factPend.length>1?'s':''} de emitir en el SRI</div>
+          <div style="font-size:12px;color:#a16207">Total: <strong>$${factPend.reduce((s,p)=>s+p.amount,0).toFixed(2)}</strong></div>
+        </div>
+      </div>
+      <a href="https://facturadorsri.sri.gob.ec/portal-facturadorsri-internet/pages/comprobantes/factura/Factura.html" target="_blank"
+        style="padding:8px 14px;background:#f59e0b;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0">
+        🌐 Ir al SRI
+      </a>
+    </div>
+    ${factPend.slice(0,5).map(py=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.6);border-radius:8px;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:#92400e">${py.ptName}</div>
+          <div style="font-size:11px;color:#a16207">${py.concept} · ${fmtDate(py.date)} · CI: ${py.cedula||'—'}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:#92400e">$${py.amount.toFixed(2)}</div>
+        <button onclick="selectPt(${py.ptId})" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.8);border:1px solid #fcd34d;border-radius:6px;cursor:pointer;color:#92400e">Ver</button>
+      </div>`).join('')}
+    ${factPend.length>5?`<div style="font-size:11px;color:#a16207;text-align:center;margin-top:4px">+${factPend.length-5} más pendientes</div>`:''}
+  </div>`:''}
   <div class="grid4" style="margin-bottom:16px">
     <div class="kpi"><div class="kpi-label">Pacientes</div><div class="kpi-val" style="color:var(--accent)">${patients.length}</div></div>
     <div class="kpi"><div class="kpi-label">Citas hoy</div><div class="kpi-val" style="color:var(--green)">${todayAppts.length}</div></div>
@@ -616,6 +657,33 @@ function renderAgendaPage(){
           <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:#fee2e2;border:1px solid #fca5a5"></div>No asistió</div>
         </div>
       </div>
+      ${(() => {
+        // Upcoming appointments in next 3 days with phone
+        const next3=[];
+        const hoy=today();
+        const d3=daysFromNow(3);
+        allAppts.filter(a=>a.date>=hoy&&a.date<=d3&&a.status!=='completada').sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)).forEach(a=>{
+          const phone=a.phone||(a.ptId?patients.find(p=>p.id===a.ptId)?.phone:'');
+          if(phone) next3.push({...a,phone});
+        });
+        if(!next3.length) return '';
+        return `<div class="card" style="padding:14px">
+          <div class="card-title" style="margin-bottom:6px">📱 Recordatorios pendientes</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Próximos 3 días — clic para enviar por WhatsApp</div>
+          ${next3.map(a=>`
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.ptName}</div>
+                <div style="font-size:10px;color:var(--text3)">${fmtDate(a.date)} · ${a.time}</div>
+              </div>
+              <button onclick="enviarWA('${a.phone}',{date:'${a.date}',time:'${a.time}',reason:'${(a.reason||'').replace(/'/g,"\\'")}'},'${a.ptName.replace(/'/g,"\\'")}')
+                " style="padding:5px 8px;background:#25d366;border:none;border-radius:7px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:4px;font-size:10px;color:#fff;font-weight:600">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Enviar
+              </button>
+            </div>`).join('')}
+        </div>`;
+      })()}
     </div>
   </div>`;
 }
@@ -630,13 +698,21 @@ function buildAllAppts(){
 function apptMiniCard(a, todayStr){
   const bg = a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
   const border = a.status==='completada'?'#6ee7b7':a.status==='no_asistio'?'#fca5a5':a.type==='quick'?'#fcd34d':'#93c5fd';
-  return`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:${bg};border:1px solid ${border};margin-bottom:6px">
-    <div style="font-size:11px;font-weight:700;color:var(--text);min-width:40px">${a.time}</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.ptName}</div>
-      <div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.reason}</div>
+  const phone=a.phone||(a.ptId?patients.find(p=>p.id===a.ptId)?.phone:'');
+  return`<div style="padding:8px;border-radius:8px;background:${bg};border:1px solid ${border};margin-bottom:6px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text);min-width:40px">${a.time}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.ptName}</div>
+        <div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.reason}</div>
+      </div>
+      <button onclick="openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="width:22px;height:22px;border:none;background:rgba(0,0,0,.08);border-radius:5px;cursor:pointer;font-size:11px;flex-shrink:0">⋯</button>
     </div>
-    <button onclick="openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="width:22px;height:22px;border:none;background:rgba(0,0,0,.08);border-radius:5px;cursor:pointer;font-size:11px;flex-shrink:0">⋯</button>
+    ${phone?`<button onclick="enviarWA('${phone}',{date:'${a.date}',time:'${a.time}',reason:'${(a.reason||'').replace(/'/g,"\\'")}'},'${a.ptName.replace(/'/g,"\\'")}')
+      " style="width:100%;margin-top:6px;padding:5px;background:#25d366;color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Enviar recordatorio WhatsApp
+    </button>`:''}
   </div>`;
 }
 
@@ -747,14 +823,21 @@ function listApptRow(a){
   const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
   const tc=a.status==='completada'?'#065f46':a.status==='no_asistio'?'#991b1b':a.type==='quick'?'#92400e':'#1e40af';
   const statusLabel=a.status==='completada'?'Completada':a.status==='no_asistio'?'No asistió':'Pendiente';
-  return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--border);margin-bottom:6px">
-    <div style="font-size:12px;font-weight:700;color:var(--text);min-width:44px">${a.time}</div>
-    <div style="flex:1">
-      <div style="font-size:13px;font-weight:600;color:var(--text)">${a.ptName}</div>
-      <div style="font-size:11px;color:var(--text2)">${a.reason}${a.phone?` · 📞 ${a.phone}`:''}</div>
+  const phone=a.phone||(a.ptId?patients.find(p=>p.id===a.ptId)?.phone:'');
+  return`<div style="padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--border);margin-bottom:6px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);min-width:44px">${a.time}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${a.ptName}</div>
+        <div style="font-size:11px;color:var(--text2)">${a.reason}${phone?` · 📞 ${phone}`:''}</div>
+      </div>
+      <span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;background:${bg};color:${tc}">${statusLabel}</span>
+      ${phone?`<button onclick="enviarWA('${phone}',{date:'${a.date}',time:'${a.time}',reason:'${(a.reason||'').replace(/'/g,"\\'")}'},'${a.ptName.replace(/'/g,"\\'")}')
+        " title="Enviar recordatorio WhatsApp" style="width:30px;height:30px;background:#25d366;border:none;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      </button>`:''}
+      <button onclick="openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="padding:5px 10px;font-size:11px;border:1px solid var(--border);border-radius:7px;background:var(--card);cursor:pointer;color:var(--text2)">⋯</button>
     </div>
-    <span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;background:${bg};color:${tc}">${statusLabel}</span>
-    <button onclick="openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="padding:5px 10px;font-size:11px;border:1px solid var(--border);border-radius:7px;background:var(--card);cursor:pointer;color:var(--text2)">⋯</button>
   </div>`;
 }
 
@@ -880,7 +963,7 @@ function convertToPatient(qId){
   openModal(`<div class="modal-title">Crear ficha de paciente</div>
   <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Se creará una ficha completa para <strong>${qa.ptName}</strong> y la cita quedará asociada a ella.</p>
   <div class="form-row"><div class="form-group"><label>Nombre completo *</label><input id="f_name" value="${qa.ptName}"></div><div class="form-group"><label>Cédula / ID</label><input id="f_ced"></div></div>
-  <div class="form-row"><div class="form-group"><label>Edad</label><input id="f_age" type="number" min="0"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${qa.phone||''}"></div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${qa.phone||''}"></div></div>
   <div class="form-row"><div class="form-group"><label>Email</label><input id="f_email" type="email"></div><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" placeholder="Penicilina, látex..."></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Antecedentes médicos</label><textarea id="f_ant"></textarea></div></div>
@@ -890,7 +973,7 @@ function convertToPatient(qId){
 function confirmConvert(qId){
   const name=v('f_name').trim();if(!name){alert('El nombre es obligatorio');return;}
   const qa=(quickAppts||[]).find(a=>String(a.id)===String(qId));if(!qa)return;
-  const newPt={id:nextId++,name,cedula:v('f_ced'),age:parseInt(v('f_age'))||0,birthdate:v('f_birth'),phone:v('f_phone'),email:v('f_email'),alergias:v('f_al'),antecedentes:v('f_ant'),surfData:{},wholeData:{},diary:[],treatments:[],payments:[],images:[],consents:[],
+  const newPt={id:nextId++,name,cedula:v('f_ced'),birthdate:v('f_birth'),phone:v('f_phone'),email:v('f_email'),alergias:v('f_al'),antecedentes:v('f_ant'),surfData:{},wholeData:{},diary:[],treatments:[],payments:[],images:[],consents:[],
     appointments:[{id:Date.now(),reason:qa.reason,date:qa.date,time:qa.time,status:qa.status,notes:qa.notes}]};
   patients.push(newPt);
   quickAppts=(quickAppts||[]).filter(a=>String(a.id)!==String(qId));
@@ -1338,7 +1421,7 @@ function renderDatos(){
     <div class="grid2">
       <div><div class="fl">Nombre completo</div><div class="fv">${p.name}</div></div>
       <div><div class="fl">Cédula / ID</div><div class="fv">${p.cedula}</div></div>
-      <div><div class="fl">Edad</div><div class="fv">${p.age} años</div></div>
+      <div><div class="fl">Edad</div><div class="fv">${calcAge(p.birthdate)} años</div></div>
       <div><div class="fl">Fecha de nacimiento</div><div class="fv">${fmtDate(p.birthdate)}</div></div>
       <div><div class="fl">Teléfono</div><div class="fv">${p.phone}</div></div>
       <div><div class="fl">Email</div><div class="fv">${p.email||'—'}</div></div>
@@ -1622,14 +1705,39 @@ function saveTx(){const name=v('f_txn').trim();if(!name)return;curPt.treatments.
 
 function renderPagos(){
   const p=curPt,txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0),deuda=Math.max(0,txT-paid);
-  return`<div class="grid3" style="margin-bottom:14px">
+  const pendFact=p.payments.filter(py=>py.factPendiente);
+  return`
+  ${pendFact.length?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+    <div style="font-size:24px">⚠️</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700;color:#92400e">Tienes ${pendFact.length} pago${pendFact.length>1?'s':''} sin facturar en el SRI</div>
+      <div style="font-size:11px;color:#a16207;margin-top:2px">Total pendiente de facturar: <strong>$${pendFact.reduce((s,p)=>s+p.amount,0).toFixed(2)}</strong></div>
+    </div>
+    <a href="https://facturadorsri.sri.gob.ec/portal-facturadorsri-internet/pages/comprobantes/factura/Factura.html" target="_blank"
+      style="padding:8px 14px;background:#f59e0b;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">
+      🌐 Ir al SRI
+    </a>
+  </div>`:''}
+  <div class="grid3" style="margin-bottom:14px">
     <div class="kpi"><div class="kpi-label">Total tratamientos</div><div class="kpi-val">$${txT}</div></div>
     <div class="kpi"><div class="kpi-label">Total pagado</div><div class="kpi-val" style="color:var(--green)">$${paid}</div></div>
     <div class="kpi"><div class="kpi-label">Saldo</div><div class="kpi-val" style="color:${deuda>0?'var(--red)':'var(--green)'}">$${deuda}</div></div>
   </div>
   <div class="card">
     <div class="action-row"><div class="card-title" style="margin:0">Historial de pagos</div><button class="btn-primary" onclick="openAddPay()">+ Registrar pago</button></div>
-    ${p.payments.length?p.payments.slice().reverse().map(py=>`<div class="row-item"><div style="flex:1"><div class="row-name">${py.concept}</div><div class="row-meta">${fmtDate(py.date)} · ${py.type}</div></div><div class="pay-amount">+$${py.amount}</div><button class="del-btn" style="margin-left:8px" onclick="delPay(${py.id})">✕</button></div>`).join(''):`<div style="font-size:13px;color:var(--text3)">Sin pagos registrados</div>`}
+    ${p.payments.length?p.payments.slice().reverse().map(py=>`
+      <div class="row-item">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="row-name">${py.concept}</div>
+            ${py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`:`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:10px">✓ Facturado</span>`}
+          </div>
+          <div class="row-meta">${fmtDate(py.date)} · ${py.type}</div>
+        </div>
+        <div class="pay-amount">+$${py.amount}</div>
+        ${py.factPendiente?`<button onclick="recordatorioFactura(${JSON.stringify(py).replace(/"/g,'&quot;')})" title="Ver recordatorio de factura" style="padding:5px 8px;background:#f59e0b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:6px">🧾 Facturar</button>`:`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:6px">✓</button>`}
+        <button class="del-btn" style="margin-left:4px" onclick="delPay(${py.id})">✕</button>
+      </div>`).join(''):`<div style="font-size:13px;color:var(--text3)">Sin pagos registrados</div>`}
     <div class="total-bar${deuda>0?' debt':''}"><div class="total-lbl${deuda>0?' debt':''}">${deuda>0?'Deuda pendiente':'Al día ✓'}</div><div class="total-val${deuda>0?' debt':''}">$${deuda>0?deuda:paid}</div></div>
   </div>`;
 }
@@ -1641,7 +1749,68 @@ function openAddPay(){
   <div class="form-row form-full"><div class="form-group"><label>Forma de pago</label><select id="f_pyt"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta de crédito</option><option>Tarjeta de débito</option><option>Cheque</option></select></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="savePay()">Guardar pago</button></div>`);
 }
-function savePay(){const amt=parseFloat(v('f_pya'));if(!amt||amt<=0)return;curPt.payments.push({id:Date.now(),concept:v('f_pyc')||'Pago',amount:amt,date:v('f_pyd'),type:v('f_pyt')});save();closeModal();renderTab();}
+function savePay(){
+  const amt=parseFloat(v('f_pya'));
+  if(!amt||amt<=0)return;
+  const pago={id:Date.now(),concept:v('f_pyc')||'Pago',amount:amt,date:v('f_pyd'),type:v('f_pyt'),factPendiente:true};
+  curPt.payments.push(pago);
+  save();
+  closeModal();
+  renderTab();
+  // Auto-show invoice reminder
+  setTimeout(()=>recordatorioFactura(pago),300);
+}
+
+function recordatorioFactura(pago){
+  if(typeof pago === 'number'){
+    // Called from button with id - find the payment
+    pago = curPt.payments.find(x=>x.id===pago);
+    if(!pago) return;
+  }
+  openModal(`<div class="modal-title">🧾 Recordatorio de factura</div>
+  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
+    <div style="font-size:28px">⚠️</div>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:4px">¡No olvides emitir la factura en el SRI!</div>
+      <div style="font-size:12px;color:#a16207;line-height:1.6">Se registró un pago de <strong>$${pago.amount.toFixed(2)}</strong> de <strong>${curPt.name}</strong>. Recuerda emitir la factura electrónica en el portal del SRI.</div>
+    </div>
+  </div>
+  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Datos para tu factura en el SRI</div>
+    <div class="grid2" style="gap:10px">
+      <div><div class="fl">Paciente / Cliente</div><div class="fv">${curPt.name}</div></div>
+      <div><div class="fl">Cédula / RUC</div><div class="fv">${curPt.cedula||'—'}</div></div>
+      <div><div class="fl">Concepto</div><div class="fv">${pago.concept}</div></div>
+      <div><div class="fl">Forma de pago</div><div class="fv">${pago.type}</div></div>
+      <div><div class="fl">Monto</div><div class="fv" style="color:var(--green);font-weight:700">$${pago.amount.toFixed(2)}</div></div>
+      <div><div class="fl">Fecha</div><div class="fv">${fmtDate(pago.date)}</div></div>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:#d1fae5;border-radius:8px;border:1px solid #6ee7b7">
+      <div style="font-size:11px;font-weight:600;color:#065f46">✓ Servicio odontológico — IVA 0%</div>
+      <div style="font-size:11px;color:#047857">Art. 56 Ley de Régimen Tributario Interno del Ecuador</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    <a href="https://facturadorsri.sri.gob.ec/portal-facturadorsri-internet/pages/comprobantes/factura/Factura.html" target="_blank"
+      style="flex:1;padding:10px;background:var(--accent);color:#fff;border-radius:9px;font-size:12px;font-weight:600;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px">
+      🌐 Abrir portal SRI
+    </a>
+    <button onclick="marcarFacturada(${pago.id})" style="flex:1;padding:10px;background:var(--green);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer">
+      ✓ Ya la hice en el SRI
+    </button>
+  </div>
+  <div class="modal-footer" style="padding-top:10px">
+    <div style="font-size:11px;color:var(--text3)">Quedará en "Pendientes" hasta que la marques como realizada.</div>
+    <button class="btn-sec" onclick="closeModal()">Cerrar — la haré luego</button>
+  </div>`);
+  document.querySelector('.modal').style.width='540px';
+}
+
+function marcarFacturada(pagoId){
+  const pago=curPt.payments.find(x=>x.id===pagoId);
+  if(pago)pago.factPendiente=false;
+  save();closeModal();renderTab();
+}
 
 function renderCitas(){
   const p=curPt,todayStr=today(),pend=p.appointments.filter(a=>a.status!=='completada'),done=p.appointments.filter(a=>a.status==='completada');
@@ -1914,7 +2083,7 @@ function delConsent(id){
 function openNewPt(){
   openModal(`<div class="modal-title">Nuevo paciente</div>
   <div class="form-row"><div class="form-group"><label>Nombre completo *</label><input id="f_name" placeholder="Ej: Ana López"></div><div class="form-group"><label>Cédula / ID</label><input id="f_ced"></div></div>
-  <div class="form-row"><div class="form-group"><label>Edad</label><input id="f_age" type="number" min="0"></div><div class="form-group"><label>Fecha de nacimiento</label><input id="f_birth" type="date"></div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha de nacimiento</label><input id="f_birth" type="date"></div><div class="form-group"><label>Teléfono</label><input id="f_phone"></div></div>
   <div class="form-row"><div class="form-group"><label>Teléfono</label><input id="f_phone"></div><div class="form-group"><label>Email</label><input id="f_email" type="email"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" placeholder="Penicilina, látex..."></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Antecedentes médicos</label><textarea id="f_ant"></textarea></div></div>
@@ -1922,21 +2091,21 @@ function openNewPt(){
 }
 function saveNewPt(){
   const name=v('f_name').trim();if(!name){alert('El nombre es obligatorio');return;}
-  patients.push({id:nextId++,name,cedula:v('f_ced'),age:parseInt(v('f_age'))||0,birthdate:v('f_birth'),phone:v('f_phone'),email:v('f_email'),alergias:v('f_al'),antecedentes:v('f_ant'),surfData:{},wholeData:{},diary:[],treatments:[],payments:[],appointments:[],images:[],consents:[],recetas:[]});
+  patients.push({id:nextId++,name,cedula:v('f_ced'),birthdate:v('f_birth'),phone:v('f_phone'),email:v('f_email'),alergias:v('f_al'),antecedentes:v('f_ant'),surfData:{},wholeData:{},diary:[],treatments:[],payments:[],appointments:[],images:[],consents:[],recetas:[]});
   save();closeModal();renderSidebar();selectPt(patients[patients.length-1].id);
 }
 function editPt(){
   const p=curPt;
   openModal(`<div class="modal-title">Editar paciente</div>
   <div class="form-row"><div class="form-group"><label>Nombre</label><input id="f_name" value="${p.name}"></div><div class="form-group"><label>Cédula</label><input id="f_ced" value="${p.cedula}"></div></div>
-  <div class="form-row"><div class="form-group"><label>Edad</label><input id="f_age" type="number" value="${p.age}"></div><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date" value="${p.birthdate||''}"></div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date" value="${p.birthdate||''}"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${p.phone}"></div></div>
   <div class="form-row"><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${p.phone}"></div><div class="form-group"><label>Email</label><input id="f_email" value="${p.email}"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" value="${p.alergias}"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Antecedentes</label><textarea id="f_ant">${p.antecedentes}</textarea></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveEditPt()">Guardar</button></div>`);
 }
 function saveEditPt(){
-  curPt.name=v('f_name');curPt.cedula=v('f_ced');curPt.age=parseInt(v('f_age'))||0;curPt.birthdate=v('f_birth');curPt.phone=v('f_phone');curPt.email=v('f_email');curPt.alergias=v('f_al');curPt.antecedentes=v('f_ant');
+  curPt.name=v('f_name');curPt.cedula=v('f_ced');curPt.birthdate=v('f_birth');curPt.phone=v('f_phone');curPt.email=v('f_email');curPt.alergias=v('f_al');curPt.antecedentes=v('f_ant');
   save();closeModal();selectPt(curPt.id);
 }
 function openDeletePt(){
@@ -2000,6 +2169,14 @@ function openLogoEdit(){
     <button onclick="agregarMed()" class="btn-primary" style="padding:8px 16px">+ Agregar</button>
   </div>
 
+  <div style="border-top:1px solid var(--border);margin:16px 0 12px"></div>
+  <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📱 Mensaje de recordatorio WhatsApp</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Usa estas variables en el mensaje: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{nombre}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{fecha}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{hora}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{motivo}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{clinica}</code></div>
+  <div class="form-group">
+    <textarea id="f_wamsg" style="min-height:110px;font-size:13px;line-height:1.6">${localStorage.getItem('oa3_wamsg')||getDefaultWAMsg()}</textarea>
+  </div>
+  <div style="font-size:10px;color:var(--text3);margin-top:4px">💡 Al hacer clic en el botón WhatsApp de cada cita, se abrirá WhatsApp con este mensaje personalizado listo para enviar.</div>
+
   <div class="modal-footer">
     <button class="btn-primary" style="background:#ef4444;margin-right:auto" onclick="factoryReset()">🗑 Restablecer app</button>
     <button class="btn-sec" onclick="closeModal()">Cancelar</button>
@@ -2035,7 +2212,39 @@ function saveLogo(){
   if(prof)document.getElementById('logoProfesional').textContent=prof;
   clinicaRUC=v('f_lruc');clinicaDireccion=v('f_ldir');clinicaTelefono=v('f_ltel');
   if(pendingCol){applyColor(pendingCol);pendingCol=null;}
+  const wamsg=document.getElementById('f_wamsg')?.value?.trim();
+  if(wamsg)localStorage.setItem('oa3_wamsg',wamsg);
   save();closeModal();
+}
+
+function getDefaultWAMsg(){
+  return `Hola {nombre} 👋\n\nLe recordamos que tiene una cita dental programada:\n\n📅 Fecha: {fecha}\n🕐 Hora: {hora}\n🦷 Motivo: {motivo}\n🏥 {clinica}\n\nPor favor confirme su asistencia o avísenos con anticipación si necesita reagendar.\n\n¡Le esperamos! 😊`;
+}
+
+function buildWAMsg(appt, ptName){
+  const clinica=document.getElementById('logoText').textContent;
+  const template=localStorage.getItem('oa3_wamsg')||getDefaultWAMsg();
+  return template
+    .replace(/{nombre}/g, ptName)
+    .replace(/{fecha}/g, fmtDate(appt.date))
+    .replace(/{hora}/g, appt.time)
+    .replace(/{motivo}/g, appt.reason||'Consulta dental')
+    .replace(/{clinica}/g, clinica);
+}
+
+function enviarWA(phone, appt, ptName){
+  if(!phone||phone.trim()===''){
+    alert(`${ptName} no tiene número de teléfono registrado.\nAgrégalo en su ficha para poder enviar WhatsApp.`);
+    return;
+  }
+  // Clean phone number — remove spaces, dashes, keep + and digits
+  let num=phone.replace(/[\s\-\(\)]/g,'');
+  // Add Ecuador country code if not present
+  if(num.startsWith('0'))num='593'+num.slice(1);
+  else if(!num.startsWith('+')&&!num.startsWith('593'))num='593'+num;
+  num=num.replace('+','');
+  const msg=encodeURIComponent(buildWAMsg(appt,ptName));
+  window.open(`https://wa.me/${num}?text=${msg}`,'_blank');
 }
 
 function factoryReset(){
@@ -2428,7 +2637,7 @@ function saveReceta(){
     // Legacy single-diag compat
     cie10cod:diagnosticos[0]?.cod||'',diagnostico:diagnosticos[0]?.desc||'',
     indicaciones:v('f_rind'),medicamentos:meds,
-    paciente:curPt.name,cedula:curPt.cedula,edad:curPt.age
+    paciente:curPt.name,cedula:curPt.cedula,edad:calcAge(curPt.birthdate)
   });
   save();closeModal();medItemCount=0;diagItemCount=0;renderTab();
 }
