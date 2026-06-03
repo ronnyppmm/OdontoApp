@@ -389,7 +389,8 @@ function legSVG(item,isSurf){
 // ═══ STATE ═══
 const COLORS=['#0ea5e9','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4'];
 const MONTHS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-let patients=[],egresos=[],facturas=[],quickAppts=[],curPt=null,curTab='datos',curPage='dashboard';
+const MONTHS_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let patients=[],egresos=[],facturas=[],quickAppts=[],archivosContables=[],curPt=null,curTab='datos',curPage='dashboard';
 let selOdoTooth=null,selOdoZone=null,nextId=1,nextEgId=1,nextFactId=1,nextRecetaId=1,logoColor='#0ea5e9',logoImg=null;
 let clinicaRUC='',clinicaDireccion='',clinicaTelefono='';
 
@@ -424,6 +425,7 @@ function save(){
     color:logoColor,img:logoImg,
     ruc:clinicaRUC,dir:clinicaDireccion,tel:clinicaTelefono
   }));
+  localStorage.setItem('oa3_arch',JSON.stringify(archivosContables));
   sbAutoSync();
 }
 
@@ -441,6 +443,7 @@ function load(){
   const neg=localStorage.getItem('oa3_neg');if(neg)nextEgId=parseInt(neg);
   const nfact=localStorage.getItem('oa3_nfact');if(nfact)nextFactId=parseInt(nfact);
   const nrec=localStorage.getItem('oa3_nreceta');if(nrec)nextRecetaId=parseInt(nrec);
+  const arch=localStorage.getItem('oa3_arch');if(arch)archivosContables=JSON.parse(arch);
   const logo=localStorage.getItem('oa3_logo');
   if(logo){
     const l=JSON.parse(logo);
@@ -986,6 +989,7 @@ function loadQuickAppts(){ const d=localStorage.getItem('oa3_qa'); quickAppts=d?
 // ═══ ESTADÍSTICAS ═══
 function renderEstadisticas(){
   const now=new Date();
+  const curY=now.getFullYear();
   const months=[];
   for(let i=5;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
@@ -998,24 +1002,90 @@ function renderEstadisticas(){
   const totalInc=patients.reduce((s,p)=>s+p.payments.reduce((a,py)=>a+py.amount,0),0);
   const totalEg=egresos.reduce((s,e)=>s+e.monto,0);
   const totalDebt=patients.reduce((s,p)=>{const txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0);return s+Math.max(0,txT-paid);},0);
-  const curMonthName=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][now.getMonth()];
+  // Current month totals (reset when month is closed)
+  const curM=now.getMonth(),curYr=now.getFullYear();
+  const mInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===curM&&d.getFullYear()===curYr;}).reduce((a,py)=>a+py.amount,0),0);
+  const mEg=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===curM&&d.getFullYear()===curYr;}).reduce((s,e)=>s+e.monto,0);
+  const curMonthName=MONTHS_FULL[now.getMonth()];
+
+  // Build yearly archive summary for current year
+  const archYear=archivosContables.filter(a=>a.anio===curY).sort((a,b)=>a.mes-b.mes);
+  const archTotalInc=archYear.reduce((s,a)=>s+a.totalIngresos,0);
+  const archTotalEg=archYear.reduce((s,a)=>s+a.totalEgresos,0);
+
+  // Live months not yet archived
+  const liveInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getFullYear()===curY;}).reduce((a,py)=>a+py.amount,0),0);
+  const liveEg=egresos.filter(e=>new Date(e.fecha).getFullYear()===curY).reduce((s,e)=>s+e.monto,0);
+  const yearTotalInc=archTotalInc+liveInc;
+  const yearTotalEg=archTotalEg+liveEg;
+
   return`
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
     <div style="font-size:16px;font-weight:700;color:var(--text)">Estadísticas financieras</div>
     <div style="display:flex;gap:8px">
       <button class="btn-sm" onclick="descargarInformeMensual()" style="background:var(--green);color:#fff;border-color:var(--green)">📥 Informe ${curMonthName}</button>
-      <button class="btn-sm" onclick="resetearMes()" style="color:var(--red);border-color:#fca5a5">🔄 Resetear mes</button>
+      <button class="btn-sm" onclick="abrirResetMes()" style="color:var(--red);border-color:#fca5a5">🗂 Cerrar mes</button>
     </div>
   </div>
+
   <div class="grid4" style="margin-bottom:16px">
-    <div class="kpi"><div class="kpi-label">Ingresos totales</div><div class="kpi-val" style="color:var(--green)">$${totalInc}</div></div>
-    <div class="kpi"><div class="kpi-label">Egresos totales</div><div class="kpi-val" style="color:var(--red)">$${totalEg}</div></div>
-    <div class="kpi"><div class="kpi-label">Utilidad neta</div><div class="kpi-val" style="color:${totalInc-totalEg>=0?'var(--green)':'var(--red)'}">$${totalInc-totalEg}</div></div>
-    <div class="kpi"><div class="kpi-label">Cartera pendiente</div><div class="kpi-val" style="color:var(--amber)">$${totalDebt}</div></div>
+    <div class="kpi"><div class="kpi-label">Ingresos ${curMonthName}</div><div class="kpi-val" style="color:var(--green)">$${mInc.toFixed(2)}</div><div class="kpi-sub">Se reinicia al cerrar mes</div></div>
+    <div class="kpi"><div class="kpi-label">Egresos ${curMonthName}</div><div class="kpi-val" style="color:var(--red)">$${mEg.toFixed(2)}</div><div class="kpi-sub">Se reinicia al cerrar mes</div></div>
+    <div class="kpi"><div class="kpi-label">Utilidad ${curMonthName}</div><div class="kpi-val" style="color:${mInc-mEg>=0?'var(--green)':'var(--red)'}">$${(mInc-mEg).toFixed(2)}</div><div class="kpi-sub">Se reinicia al cerrar mes</div></div>
+    <div class="kpi"><div class="kpi-label">Cartera pendiente</div><div class="kpi-val" style="color:var(--amber)">$${totalDebt.toFixed(2)}</div><div class="kpi-sub">Acumulado permanente</div></div>
   </div>
 
+  ${archYear.length>0?`
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="card-title" style="margin:0">📊 Resumen anual ${curY} — meses cerrados</div>
+      <button class="btn-sm" onclick="descargarInformeAnual(${curY})" style="background:var(--accent);color:#fff;border-color:var(--accent)">📥 Informe anual</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--bg)">
+            <th style="padding:8px 12px;text-align:left;font-weight:700;color:var(--text2);font-size:10px;text-transform:uppercase">Mes</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--green);font-size:10px;text-transform:uppercase">Ingresos</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--red);font-size:10px;text-transform:uppercase">Egresos</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--text2);font-size:10px;text-transform:uppercase">Utilidad</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--text2);font-size:10px;text-transform:uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${archYear.map(a=>`
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:10px 12px;font-weight:600;color:var(--text)">${a.label}</td>
+              <td style="padding:10px 12px;text-align:right;color:var(--green);font-weight:600">$${a.totalIngresos.toFixed(2)}</td>
+              <td style="padding:10px 12px;text-align:right;color:var(--red);font-weight:600">$${a.totalEgresos.toFixed(2)}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;color:${a.utilidad>=0?'var(--green)':'var(--red)'}">${a.utilidad>=0?'+':''}$${a.utilidad.toFixed(2)}</td>
+              <td style="padding:10px 12px;text-align:center;display:flex;gap:6px;justify-content:center">
+                <button class="btn-sm" style="font-size:10px;padding:3px 8px" onclick="verArchivoMes(${a.id})">👁 Ver</button>
+                <button class="btn-sm" style="font-size:10px;padding:3px 8px;color:var(--green)" onclick="descargarArchivoMes(${a.id})">📥</button>
+                <button class="del-btn" style="font-size:10px;padding:3px 8px" onclick="eliminarArchivoMes(${a.id})">✕</button>
+              </td>
+            </tr>`).join('')}
+          <tr style="border-top:2px solid var(--text);background:var(--bg)">
+            <td style="padding:10px 12px;font-weight:700;color:var(--text)">TOTAL ARCHIVADO</td>
+            <td style="padding:10px 12px;text-align:right;color:var(--green);font-weight:700">$${archTotalInc.toFixed(2)}</td>
+            <td style="padding:10px 12px;text-align:right;color:var(--red);font-weight:700">$${archTotalEg.toFixed(2)}</td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;color:${archTotalInc-archTotalEg>=0?'var(--green)':'var(--red)'}">$${(archTotalInc-archTotalEg).toFixed(2)}</td>
+            <td></td>
+          </tr>
+          <tr style="background:#dbeafe">
+            <td style="padding:10px 12px;font-weight:700;color:#1e40af">TOTAL AÑO ${curY}</td>
+            <td style="padding:10px 12px;text-align:right;color:var(--green);font-weight:700">$${yearTotalInc.toFixed(2)}</td>
+            <td style="padding:10px 12px;text-align:right;color:var(--red);font-weight:700">$${yearTotalEg.toFixed(2)}</td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;color:${yearTotalInc-yearTotalEg>=0?'var(--green)':'var(--red)'}">$${(yearTotalInc-yearTotalEg).toFixed(2)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`:''}
+
   <div class="card">
-    <div class="card-title">Ingresos vs Egresos — últimos 6 meses</div>
+    <div class="card-title">Ingresos vs Egresos — últimos 6 meses (activos)</div>
     <div style="display:flex;gap:12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div style="width:12px;height:12px;background:var(--green);border-radius:2px"></div>Ingresos</div>
       <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div style="width:12px;height:12px;background:var(--red);border-radius:2px"></div>Egresos</div>
@@ -1024,7 +1094,7 @@ function renderEstadisticas(){
     <div style="display:flex;gap:6px;align-items:flex-end;height:130px;padding-top:10px">
       ${months.map(m=>`
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-          <div style="font-size:8px;color:var(--text3)">$${m.util>=0?'+':''}${m.util}</div>
+          <div style="font-size:8px;color:var(--text3)">$${m.util>=0?'+':''}${m.util.toFixed(0)}</div>
           <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:100px">
             <div style="flex:1;background:var(--green);border-radius:3px 3px 0 0;height:${Math.round((m.inc/maxVal)*95)+3}px;opacity:.85"></div>
             <div style="flex:1;background:var(--red);border-radius:3px 3px 0 0;height:${Math.round((m.eg/maxVal)*95)+3}px;opacity:.85"></div>
@@ -1080,121 +1150,210 @@ function renderEstadisticas(){
   </div>`;
 }
 
-function resetearMes(){
+function abrirResetMes(){
   const now=new Date();
-  const mesNombre=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][now.getMonth()];
-  if(!confirm(`¿Resetear los datos financieros de ${mesNombre} ${now.getFullYear()}?\n\nEsto eliminará:\n• Todos los pagos registrados este mes\n• Todos los egresos de este mes\n\n⚠️ Se recomienda descargar el informe mensual antes de resetear.\n\nEsta acción NO se puede deshacer.`))return;
-  const m=now.getMonth(),y=now.getFullYear();
-  // Remove this month's payments from all patients
+  const opts=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const m=d.getMonth(),y=d.getFullYear();
+    const yaArchivado=archivosContables.some(a=>a.mes===m&&a.anio===y);
+    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y;}).reduce((a,py)=>a+py.amount,0),0);
+    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y;}).reduce((s,e)=>s+e.monto,0);
+    opts.push({m,y,label:`${MONTHS_FULL[m]} ${y}`,inc,eg,yaArchivado});
+  }
+  openModal(`<div class="modal-title">🗂 Cerrar y archivar mes</div>
+  <div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#1e40af">
+    <strong>¿Cómo funciona?</strong> Al cerrar un mes, se guarda un snapshot con todos los ingresos y egresos de ese período. Luego puedes eliminar esos datos del sistema activo sin perder el historial. Al final del año verás el resumen completo mes a mes.
+  </div>
+  <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Selecciona el mes a cerrar</div>
+  <div style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+    ${opts.map(o=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid ${o.yaArchivado?'#86efac':'var(--border)'};border-radius:10px;background:${o.yaArchivado?'#f0fdf4':'var(--bg)'}">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${o.label}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">
+            Ingresos: <span style="color:var(--green);font-weight:600">$${o.inc.toFixed(2)}</span> ·
+            Egresos: <span style="color:var(--red);font-weight:600">$${o.eg.toFixed(2)}</span> ·
+            Utilidad: <span style="font-weight:600;color:${o.inc-o.eg>=0?'var(--green)':'var(--red)'}">$${(o.inc-o.eg).toFixed(2)}</span>
+          </div>
+        </div>
+        ${o.yaArchivado
+          ?`<span style="font-size:11px;font-weight:600;color:#15803d;background:#d1fae5;padding:3px 10px;border-radius:20px">✓ Archivado</span>`
+          :(o.inc>0||o.eg>0)
+            ?`<button onclick="cerrarMes(${o.m},${o.y})" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">🗂 Cerrar mes</button>`
+            :`<span style="font-size:11px;color:var(--text3)">Sin movimientos</span>`
+        }
+      </div>`).join('')}
+  </div>
+  <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button></div>`);
+  document.querySelector('.modal').style.width='580px';
+}
+
+function cerrarMes(m,y){
+  const mesNombre=`${MONTHS_FULL[m]} ${y}`;
+  const pagos=[];
+  patients.forEach(p=>{
+    p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y;})
+      .forEach(py=>pagos.push({paciente:p.name,cedula:p.cedula,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type,ptId:p.id,pagoId:py.id}));
+  });
+  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y;});
+  const totalIngresos=pagos.reduce((s,p)=>s+p.monto,0);
+  const totalEgresos=egresosM.reduce((s,e)=>s+e.monto,0);
+
+  if(!confirm(`¿Cerrar y archivar ${mesNombre}?\n\n📊 Resumen:\n• Ingresos: $${totalIngresos.toFixed(2)}\n• Egresos: $${totalEgresos.toFixed(2)}\n• Utilidad: $${(totalIngresos-totalEgresos).toFixed(2)}\n\nEl mes quedará archivado y los contadores de Ingresos, Egresos y Utilidad se reiniciarán para el nuevo mes.\n\n⚠️ Los valores de Cartera Pendiente se mantienen.`))return;
+
+  // Save archive snapshot
+  archivosContables.push({
+    id:Date.now(),
+    mes:m, anio:y,
+    label:mesNombre,
+    fechaCierre:today(),
+    pagos, egresos:egresosM,
+    totalIngresos, totalEgresos,
+    utilidad:totalIngresos-totalEgresos,
+    pacientesAtendidos:[...new Set(pagos.map(p=>p.paciente))].length
+  });
+
+  // Auto-clear this month's payments and egresos
   patients.forEach(p=>{
     p.payments=p.payments.filter(py=>{
       const d=new Date(py.date);
       return!(d.getMonth()===m&&d.getFullYear()===y);
     });
   });
-  // Remove this month's egresos
   egresos=egresos.filter(e=>{
     const d=new Date(e.fecha);
     return!(d.getMonth()===m&&d.getFullYear()===y);
   });
+
   save();
+  closeModal();
   showPage('estadisticas');
-  alert(`✓ Datos de ${mesNombre} ${y} eliminados correctamente.`);
+  alert(`✓ ${mesNombre} cerrado correctamente.\n\nLos contadores de ingresos, egresos y utilidad se reiniciaron.\nLa cartera pendiente se mantiene intacta.`);
+}
+
+function verArchivoMes(id){
+  const a=archivosContables.find(x=>x.id===id);if(!a)return;
+  openModal(`<div class="modal-title">📊 ${a.label} — Detalle archivado</div>
+  <div class="grid3" style="margin-bottom:14px;gap:10px">
+    <div class="kpi" style="padding:12px"><div class="kpi-label">Ingresos</div><div class="kpi-val" style="font-size:20px;color:var(--green)">$${a.totalIngresos.toFixed(2)}</div></div>
+    <div class="kpi" style="padding:12px"><div class="kpi-label">Egresos</div><div class="kpi-val" style="font-size:20px;color:var(--red)">$${a.totalEgresos.toFixed(2)}</div></div>
+    <div class="kpi" style="padding:12px"><div class="kpi-label">Utilidad</div><div class="kpi-val" style="font-size:20px;color:${a.utilidad>=0?'var(--green)':'var(--red)'}">$${a.utilidad.toFixed(2)}</div></div>
+  </div>
+  <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Ingresos (${a.pagos.length})</div>
+  <div style="max-height:180px;overflow-y:auto;margin-bottom:12px">
+    ${a.pagos.map(p=>`<div class="row-item"><div style="flex:1"><div class="row-name">${p.paciente}</div><div class="row-meta">${p.concepto} · ${fmtDate(p.fecha)} · ${p.tipo}</div></div><div class="pay-amount">$${p.monto.toFixed(2)}</div></div>`).join('')}
+  </div>
+  <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Egresos (${a.egresos.length})</div>
+  <div style="max-height:140px;overflow-y:auto">
+    ${a.egresos.map(e=>`<div class="row-item"><div style="flex:1"><div class="row-name">${e.concepto}</div><div class="row-meta">${e.categoria} · ${fmtDate(e.fecha)}</div></div><div class="pay-egreso">-$${e.monto.toFixed(2)}</div></div>`).join('')}
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn-primary" onclick="descargarArchivoMes(${id});closeModal()">📥 Descargar informe</button>
+  </div>`);
+  document.querySelector('.modal').style.width='580px';
+}
+
+function eliminarArchivoMes(id){
+  if(!confirm('¿Eliminar este archivo mensual del historial? Esta acción no se puede deshacer.'))return;
+  archivosContables=archivosContables.filter(x=>x.id!==id);
+  save();showPage('estadisticas');
+}
+
+function descargarArchivoMes(id){
+  const a=archivosContables.find(x=>x.id===id);if(!a)return;
+  _generarInformeHTML(a.label,a.pagos,a.egresos,a.totalIngresos,a.totalEgresos,a.utilidad,a.pacientesAtendidos,a.fechaCierre);
+}
+
+function descargarInformeAnual(anio){
+  const arch=archivosContables.filter(a=>a.anio===anio).sort((a,b)=>a.mes-b.mes);
+  const clinicaNombre=document.getElementById('logoText').textContent;
+  const profesional=document.getElementById('logoProfesional').textContent;
+  const totalInc=arch.reduce((s,a)=>s+a.totalIngresos,0);
+  const totalEg=arch.reduce((s,a)=>s+a.totalEgresos,0);
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Anual ${anio}</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#0f172a;font-size:12px}
+  h1{font-size:22px;font-weight:700;margin-bottom:4px}.sub{font-size:13px;color:#64748b;margin-bottom:24px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #0f172a}
+  table{width:100%;border-collapse:collapse;margin-bottom:24px}
+  th{background:#f1f5f9;padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase}
+  td{padding:9px 12px;border-bottom:1px solid #e2e8f0}
+  .total{font-weight:700;background:#f8fafc}.grand{font-weight:700;background:#dbeafe}
+  .green{color:#10b981}.red{color:#ef4444}.footer{margin-top:24px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px}
+  @media print{body{padding:16px}}</style></head><body>
+  <div class="header"><div><h1>${clinicaNombre}</h1><div class="sub">${profesional} · Informe Anual ${anio}</div></div>
+  <div style="text-align:right"><div style="font-size:18px;font-weight:700">RESUMEN ANUAL ${anio}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Generado: ${new Date().toLocaleString('es-EC')}</div></div></div>
+  <table><thead><tr><th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Egresos</th><th style="text-align:right">Utilidad</th><th style="text-align:right">Pacientes</th></tr></thead>
+  <tbody>
+  ${arch.map(a=>`<tr><td>${a.label}</td><td style="text-align:right" class="green">$${a.totalIngresos.toFixed(2)}</td><td style="text-align:right" class="red">$${a.totalEgresos.toFixed(2)}</td><td style="text-align:right;font-weight:600;color:${a.utilidad>=0?'#10b981':'#ef4444'}">${a.utilidad>=0?'+':''}$${a.utilidad.toFixed(2)}</td><td style="text-align:right">${a.pacientesAtendidos}</td></tr>`).join('')}
+  <tr class="grand"><td>TOTAL AÑO ${anio}</td><td style="text-align:right" class="green">$${totalInc.toFixed(2)}</td><td style="text-align:right" class="red">$${totalEg.toFixed(2)}</td><td style="text-align:right;font-weight:700;color:${totalInc-totalEg>=0?'#10b981':'#ef4444'}">${totalInc-totalEg>=0?'+':''}$${(totalInc-totalEg).toFixed(2)}</td><td></td></tr>
+  </tbody></table>
+  <div class="footer">Informe generado por OdontoApp · ${clinicaNombre} · Año ${anio}</div></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a2=document.createElement('a');
+  a2.href=url;a2.download=`Informe_Anual_${anio}_${clinicaNombre.replace(/\s+/g,'_')}.html`;
+  a2.click();URL.revokeObjectURL(url);
+}
+
+function _generarInformeHTML(titulo,pagos,egresosD,totalInc,totalEg,utilidad,pacientes,fechaCierre){
+  const clinicaNombre=document.getElementById('logoText').textContent;
+  const profesional=document.getElementById('logoProfesional').textContent;
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe ${titulo}</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#0f172a;font-size:12px}
+  h1{font-size:22px;font-weight:700;margin-bottom:4px}.sub{font-size:13px;color:#64748b;margin-bottom:24px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #0f172a}
+  .kpi-row{display:flex;gap:16px;margin-bottom:24px}.kpi{flex:1;padding:14px;border:1px solid #e2e8f0;border-radius:10px}
+  .kpi-label{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .kpi-val{font-size:22px;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin-bottom:24px}
+  th{background:#f1f5f9;padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase}
+  td{padding:8px 12px;border-bottom:1px solid #e2e8f0}
+  .total-row td{font-weight:700;background:#f8fafc}
+  .green{color:#10b981}.red{color:#ef4444}
+  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}
+  @media print{body{padding:10px}}</style></head><body>
+  <div class="header"><div><h1>${clinicaNombre}</h1><div class="sub">${profesional} · RUC: ${clinicaRUC||'—'}</div></div>
+  <div style="text-align:right"><div style="font-size:18px;font-weight:700">INFORME MENSUAL</div><div style="font-size:14px;color:#64748b;margin-top:4px">${titulo}</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">Cerrado: ${fmtDate(fechaCierre)}</div></div></div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Ingresos</div><div class="kpi-val green">$${totalInc.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Egresos</div><div class="kpi-val red">$${totalEg.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Utilidad</div><div class="kpi-val" style="color:${utilidad>=0?'#10b981':'#ef4444'}">${utilidad>=0?'+':''}$${utilidad.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Pacientes</div><div class="kpi-val" style="color:#0ea5e9">${pacientes}</div></div>
+  </div>
+  <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">💰 Ingresos (${pagos.length})</div>
+  <table><thead><tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Forma de pago</th><th style="text-align:right">Monto</th></tr></thead>
+  <tbody>${pagos.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(p=>`<tr><td>${fmtDate(p.fecha)}</td><td>${p.paciente}</td><td>${p.concepto}</td><td>${p.tipo}</td><td style="text-align:right" class="green">$${p.monto.toFixed(2)}</td></tr>`).join('')}
+  <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL:</td><td style="text-align:right" class="green">$${totalInc.toFixed(2)}</td></tr></tbody></table>
+  <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">📤 Egresos (${egresosD.length})</div>
+  <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th style="text-align:right">Monto</th></tr></thead>
+  <tbody>${egresosD.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(e=>`<tr><td>${fmtDate(e.fecha)}</td><td>${e.concepto}</td><td>${e.categoria}</td><td>${e.proveedor||'—'}</td><td style="text-align:right" class="red">$${e.monto.toFixed(2)}</td></tr>`).join('')}
+  <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL:</td><td style="text-align:right" class="red">$${totalEg.toFixed(2)}</td></tr></tbody></table>
+  <div class="footer">Informe generado por OdontoApp · ${clinicaNombre} · ${titulo}</div></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`Informe_${titulo.replace(/\s+/g,'_')}.html`;
+  a.click();URL.revokeObjectURL(url);
 }
 
 function descargarInformeMensual(){
   const now=new Date();
   const m=now.getMonth(),y=now.getFullYear();
-  const mesNombre=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m];
-  const clinicaNombre=document.getElementById('logoText').textContent;
-  const profesional=document.getElementById('logoProfesional').textContent;
-
-  // Collect monthly data
+  const mesNombre=`${MONTHS_FULL[m]} ${y}`;
   const pagos=[];
   patients.forEach(p=>{
     p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y;})
-      .forEach(py=>pagos.push({paciente:p.name,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type}));
+      .forEach(py=>pagos.push({paciente:p.name,cedula:p.cedula,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type}));
   });
   const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y;});
-  const totalIng=pagos.reduce((s,p)=>s+p.monto,0);
+  const totalInc=pagos.reduce((s,p)=>s+p.monto,0);
   const totalEg=egresosM.reduce((s,e)=>s+e.monto,0);
-  const utilidad=totalIng-totalEg;
-
-  // Build HTML report
-  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <title>Informe ${mesNombre} ${y} — ${clinicaNombre}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#0f172a;font-size:12px}
-    h1{font-size:22px;font-weight:700;color:#0f172a;margin-bottom:4px}
-    .sub{font-size:13px;color:#64748b;margin-bottom:24px}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #0f172a}
-    .kpi-row{display:flex;gap:16px;margin-bottom:24px}
-    .kpi{flex:1;padding:14px;border:1px solid #e2e8f0;border-radius:10px}
-    .kpi-label{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-    .kpi-val{font-size:22px;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-bottom:24px}
-    th{background:#f1f5f9;padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
-    td{padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px}
-    tr:last-child td{border:none}
-    .section-title{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
-    .green{color:#10b981}.red{color:#ef4444}.blue{color:#0ea5e9}
-    .total-row td{font-weight:700;background:#f8fafc}
-    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}
-    @media print{body{padding:20px}}
-  </style></head><body>
-  <div class="header">
-    <div>
-      <h1>${clinicaNombre}</h1>
-      <div class="sub">${profesional} · RUC: ${clinicaRUC||'—'} · ${clinicaDireccion||''}</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:18px;font-weight:700;color:#0f172a">INFORME MENSUAL</div>
-      <div style="font-size:14px;color:#64748b;margin-top:4px">${mesNombre} ${y}</div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:2px">Generado: ${new Date().toLocaleString('es-EC')}</div>
-    </div>
-  </div>
-
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">Total ingresos</div><div class="kpi-val green">$${totalIng.toFixed(2)}</div></div>
-    <div class="kpi"><div class="kpi-label">Total egresos</div><div class="kpi-val red">$${totalEg.toFixed(2)}</div></div>
-    <div class="kpi"><div class="kpi-label">Utilidad neta</div><div class="kpi-val ${utilidad>=0?'green':'red'}">${utilidad>=0?'+':''}$${utilidad.toFixed(2)}</div></div>
-    <div class="kpi"><div class="kpi-label">Pacientes atendidos</div><div class="kpi-val blue">${[...new Set(pagos.map(p=>p.paciente))].length}</div></div>
-  </div>
-
-  <div class="section-title">💰 Ingresos del mes (${pagos.length} registros)</div>
-  <table>
-    <thead><tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Forma de pago</th><th style="text-align:right">Monto</th></tr></thead>
-    <tbody>
-      ${pagos.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(p=>`
-      <tr><td>${fmtDate(p.fecha)}</td><td>${p.paciente}</td><td>${p.concepto}</td><td>${p.tipo}</td><td style="text-align:right;color:#10b981;font-weight:600">$${p.monto.toFixed(2)}</td></tr>`).join('')}
-      <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL INGRESOS:</td><td style="text-align:right;color:#10b981">$${totalIng.toFixed(2)}</td></tr>
-    </tbody>
-  </table>
-
-  <div class="section-title">📤 Egresos del mes (${egresosM.length} registros)</div>
-  <table>
-    <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th style="text-align:right">Monto</th></tr></thead>
-    <tbody>
-      ${egresosM.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(e=>`
-      <tr><td>${fmtDate(e.fecha)}</td><td>${e.concepto}</td><td>${e.categoria}</td><td>${e.proveedor||'—'}</td><td style="text-align:right;color:#ef4444;font-weight:600">$${e.monto.toFixed(2)}</td></tr>`).join('')}
-      <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL EGRESOS:</td><td style="text-align:right;color:#ef4444">$${totalEg.toFixed(2)}</td></tr>
-    </tbody>
-  </table>
-
-  <div class="footer">
-    Informe generado automáticamente por OdontoApp · ${clinicaNombre} · ${mesNombre} ${y}
-  </div>
-  </body></html>`;
-
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`Informe_${mesNombre}_${y}_${clinicaNombre.replace(/\s+/g,'_')}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const pacientes=[...new Set(pagos.map(p=>p.paciente))].length;
+  _generarInformeHTML(mesNombre,pagos,egresosM,totalInc,totalEg,totalInc-totalEg,pacientes,today());
 }
+
 function openAddEgreso(){
   openModal(`<div class="modal-title">Registrar egreso</div>
   <div class="form-row form-full"><div class="form-group"><label>Concepto *</label><input id="f_ec" placeholder="Arriendo, materiales, servicios..."></div></div>
@@ -2083,8 +2242,8 @@ function delConsent(id){
 function openNewPt(){
   openModal(`<div class="modal-title">Nuevo paciente</div>
   <div class="form-row"><div class="form-group"><label>Nombre completo *</label><input id="f_name" placeholder="Ej: Ana López"></div><div class="form-group"><label>Cédula / ID</label><input id="f_ced"></div></div>
-  <div class="form-row"><div class="form-group"><label>Fecha de nacimiento</label><input id="f_birth" type="date"></div><div class="form-group"><label>Teléfono</label><input id="f_phone"></div></div>
-  <div class="form-row"><div class="form-group"><label>Teléfono</label><input id="f_phone"></div><div class="form-group"><label>Email</label><input id="f_email" type="email"></div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha de nacimiento</label><input id="f_birth" type="date"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" placeholder="0987-654-321"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Email</label><input id="f_email" type="email" placeholder="correo@ejemplo.com"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" placeholder="Penicilina, látex..."></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Antecedentes médicos</label><textarea id="f_ant"></textarea></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveNewPt()">Guardar</button></div>`);
@@ -2098,10 +2257,10 @@ function editPt(){
   const p=curPt;
   openModal(`<div class="modal-title">Editar paciente</div>
   <div class="form-row"><div class="form-group"><label>Nombre</label><input id="f_name" value="${p.name}"></div><div class="form-group"><label>Cédula</label><input id="f_ced" value="${p.cedula}"></div></div>
-  <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date" value="${p.birthdate||''}"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${p.phone}"></div></div>
-  <div class="form-row"><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${p.phone}"></div><div class="form-group"><label>Email</label><input id="f_email" value="${p.email}"></div></div>
-  <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" value="${p.alergias}"></div></div>
-  <div class="form-row form-full"><div class="form-group"><label>Antecedentes</label><textarea id="f_ant">${p.antecedentes}</textarea></div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date" value="${p.birthdate||''}"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${p.phone||''}"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Email</label><input id="f_email" value="${p.email||''}"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" value="${p.alergias||''}"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Antecedentes</label><textarea id="f_ant">${p.antecedentes||''}</textarea></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveEditPt()">Guardar</button></div>`);
 }
 function saveEditPt(){
