@@ -542,8 +542,8 @@ function renderDashboard(){
   patients.forEach(p=>p.appointments.filter(a=>a.date>todayStr&&a.status!=='completada').forEach(a=>upcoming.push({...a,ptName:p.name,ptId:p.id})));
   upcoming.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
   const bdToday=patients.filter(p=>{if(!p.birthdate)return false;const b=p.birthdate.split('-');return b[1]===String(now.getMonth()+1).padStart(2,'0')&&b[2]===String(now.getDate()).padStart(2,'0');});
-  const mIncome=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((a,py)=>a+py.amount,0),0);
-  const mEgresos=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,e)=>s+e.monto,0);
+  const mIncome=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+  const mEgresos=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
   const pendTx=patients.reduce((s,p)=>s+p.treatments.filter(t=>t.status==='pendiente').length,0);
   // Collect all pending invoices across patients
   const factPend=[];
@@ -994,18 +994,16 @@ function renderEstadisticas(){
   for(let i=5;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     const m=d.getMonth(),y=d.getFullYear();
-    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y;}).reduce((a,py)=>a+py.amount,0),0);
-    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y;}).reduce((s,e)=>s+e.monto,0);
+    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
     months.push({label:MONTHS[m],inc,eg,util:inc-eg});
   }
   const maxVal=Math.max(...months.map(m=>Math.max(m.inc,m.eg)),1);
-  const totalInc=patients.reduce((s,p)=>s+p.payments.reduce((a,py)=>a+py.amount,0),0);
-  const totalEg=egresos.reduce((s,e)=>s+e.monto,0);
   const totalDebt=patients.reduce((s,p)=>{const txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0);return s+Math.max(0,txT-paid);},0);
-  // Current month totals (reset when month is closed)
+  // Current month totals — only non-archived (reset when month is closed)
   const curM=now.getMonth(),curYr=now.getFullYear();
-  const mInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===curM&&d.getFullYear()===curYr;}).reduce((a,py)=>a+py.amount,0),0);
-  const mEg=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===curM&&d.getFullYear()===curYr;}).reduce((s,e)=>s+e.monto,0);
+  const mInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===curM&&d.getFullYear()===curYr&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+  const mEg=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===curM&&d.getFullYear()===curYr&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
   const curMonthName=MONTHS_FULL[now.getMonth()];
 
   // Build yearly archive summary for current year
@@ -1014,8 +1012,8 @@ function renderEstadisticas(){
   const archTotalEg=archYear.reduce((s,a)=>s+a.totalEgresos,0);
 
   // Live months not yet archived
-  const liveInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getFullYear()===curY;}).reduce((a,py)=>a+py.amount,0),0);
-  const liveEg=egresos.filter(e=>new Date(e.fecha).getFullYear()===curY).reduce((s,e)=>s+e.monto,0);
+  const liveInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getFullYear()===curY&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+  const liveEg=egresos.filter(e=>new Date(e.fecha).getFullYear()===curY&&!e.archivado).reduce((s,e)=>s+e.monto,0);
   const yearTotalInc=archTotalInc+liveInc;
   const yearTotalEg=archTotalEg+liveEg;
 
@@ -1108,7 +1106,7 @@ function renderEstadisticas(){
   <div class="grid2">
     <div class="card">
       <div class="action-row"><div class="card-title" style="margin:0">Egresos registrados</div><button class="btn-primary" onclick="openAddEgreso()">+ Agregar egreso</button></div>
-      ${egresos.slice().reverse().slice(0,10).map(e=>`
+      ${egresos.filter(e=>!e.archivado).slice().reverse().slice(0,10).map(e=>`
         <div class="row-item">
           <div style="flex:1"><div class="row-name">${e.concepto}</div><div class="row-meta">${e.categoria} · ${fmtDate(e.fecha)}${e.proveedor?' · '+e.proveedor:''}</div></div>
           <div class="pay-egreso">-$${e.monto}</div>
@@ -1120,7 +1118,7 @@ function renderEstadisticas(){
       <div class="card-title">Egresos por categoría</div>
       ${(() => {
         const cats={};
-        egresos.forEach(e=>cats[e.categoria]=(cats[e.categoria]||0)+e.monto);
+        egresos.filter(e=>!e.archivado).forEach(e=>cats[e.categoria]=(cats[e.categoria]||0)+e.monto);
         const sorted=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
         return sorted.length?sorted.map(([cat,total])=>`
           <div class="row-item">
@@ -1135,7 +1133,8 @@ function renderEstadisticas(){
     <div class="card-title">Resumen por paciente</div>
     ${patients.map(p=>{
       const txT=p.treatments.reduce((a,t)=>a+t.cost,0);
-      const paid=p.payments.reduce((a,py)=>a+py.amount,0);
+      const paid=p.payments.reduce((a,py)=>a+py.amount,0); // includes archived — correct for cartera
+      const paidActive=p.payments.filter(py=>!py.archivado).reduce((a,py)=>a+py.amount,0);
       const deuda=Math.max(0,txT-paid);
       return`<div class="row-item">
         <div class="sb-av" style="background:${ptColor(p.id)};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${initials(p.name)}</div>
@@ -1157,8 +1156,8 @@ function abrirResetMes(){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     const m=d.getMonth(),y=d.getFullYear();
     const yaArchivado=archivosContables.some(a=>a.mes===m&&a.anio===y);
-    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y;}).reduce((a,py)=>a+py.amount,0),0);
-    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y;}).reduce((s,e)=>s+e.monto,0);
+    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
     opts.push({m,y,label:`${MONTHS_FULL[m]} ${y}`,inc,eg,yaArchivado});
   }
   openModal(`<div class="modal-title">🗂 Cerrar y archivar mes</div>
@@ -1193,14 +1192,16 @@ function cerrarMes(m,y){
   const mesNombre=`${MONTHS_FULL[m]} ${y}`;
   const pagos=[];
   patients.forEach(p=>{
-    p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y;})
+    p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y&&!py.archivado;})
       .forEach(py=>pagos.push({paciente:p.name,cedula:p.cedula,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type,ptId:p.id,pagoId:py.id}));
   });
-  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y;});
+  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y&&!e.archivado;});
   const totalIngresos=pagos.reduce((s,p)=>s+p.monto,0);
   const totalEgresos=egresosM.reduce((s,e)=>s+e.monto,0);
 
-  if(!confirm(`¿Cerrar y archivar ${mesNombre}?\n\n📊 Resumen:\n• Ingresos: $${totalIngresos.toFixed(2)}\n• Egresos: $${totalEgresos.toFixed(2)}\n• Utilidad: $${(totalIngresos-totalEgresos).toFixed(2)}\n\nEl mes quedará archivado y los contadores de Ingresos, Egresos y Utilidad se reiniciarán para el nuevo mes.\n\n⚠️ Los valores de Cartera Pendiente se mantienen.`))return;
+  if(!totalIngresos&&!totalEgresos){alert('No hay movimientos activos en este mes para cerrar.');return;}
+
+  if(!confirm(`¿Cerrar y archivar ${mesNombre}?\n\n📊 Resumen:\n• Ingresos: $${totalIngresos.toFixed(2)}\n• Egresos: $${totalEgresos.toFixed(2)}\n• Utilidad: $${(totalIngresos-totalEgresos).toFixed(2)}\n\nLos contadores mensuales se reiniciarán.\nLa cartera pendiente se mantiene intacta.`))return;
 
   // Save archive snapshot
   archivosContables.push({
@@ -1214,22 +1215,23 @@ function cerrarMes(m,y){
     pacientesAtendidos:[...new Set(pagos.map(p=>p.paciente))].length
   });
 
-  // Auto-clear this month's payments and egresos
+  // Mark payments as archived (NOT deleted — cartera pendiente stays correct)
   patients.forEach(p=>{
-    p.payments=p.payments.filter(py=>{
+    p.payments.forEach(py=>{
       const d=new Date(py.date);
-      return!(d.getMonth()===m&&d.getFullYear()===y);
+      if(d.getMonth()===m&&d.getFullYear()===y)py.archivado=true;
     });
   });
-  egresos=egresos.filter(e=>{
+  // Mark egresos as archived
+  egresos.forEach(e=>{
     const d=new Date(e.fecha);
-    return!(d.getMonth()===m&&d.getFullYear()===y);
+    if(d.getMonth()===m&&d.getFullYear()===y)e.archivado=true;
   });
 
   save();
   closeModal();
   showPage('estadisticas');
-  alert(`✓ ${mesNombre} cerrado correctamente.\n\nLos contadores de ingresos, egresos y utilidad se reiniciaron.\nLa cartera pendiente se mantiene intacta.`);
+  alert(`✓ ${mesNombre} cerrado correctamente.\n\nIngresos, egresos y utilidad reiniciados.\nLa cartera pendiente se mantiene intacta.`);
 }
 
 function verArchivoMes(id){
@@ -1885,16 +1887,16 @@ function renderPagos(){
   <div class="card">
     <div class="action-row"><div class="card-title" style="margin:0">Historial de pagos</div><button class="btn-primary" onclick="openAddPay()">+ Registrar pago</button></div>
     ${p.payments.length?p.payments.slice().reverse().map(py=>`
-      <div class="row-item">
+      <div class="row-item" style="${py.archivado?'opacity:.55':''}">
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:6px">
             <div class="row-name">${py.concept}</div>
-            ${py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`:`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:10px">✓ Facturado</span>`}
+            ${py.archivado?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#f1f5f9;color:#64748b;border-radius:10px;border:1px solid #e2e8f0">📦 Archivado</span>`:py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`:`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:10px">✓ Facturado</span>`}
           </div>
           <div class="row-meta">${fmtDate(py.date)} · ${py.type}</div>
         </div>
         <div class="pay-amount">+$${py.amount}</div>
-        ${py.factPendiente?`<button onclick="recordatorioFactura(${JSON.stringify(py).replace(/"/g,'&quot;')})" title="Ver recordatorio de factura" style="padding:5px 8px;background:#f59e0b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:6px">🧾 Facturar</button>`:`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:6px">✓</button>`}
+        ${!py.archivado&&py.factPendiente?`<button onclick="recordatorioFactura(${py.id})" title="Ver recordatorio de factura" style="padding:5px 8px;background:#f59e0b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:6px">🧾 Facturar</button>`:!py.archivado?`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:6px">✓</button>`:''}
         <button class="del-btn" style="margin-left:4px" onclick="delPay(${py.id})">✕</button>
       </div>`).join(''):`<div style="font-size:13px;color:var(--text3)">Sin pagos registrados</div>`}
     <div class="total-bar${deuda>0?' debt':''}"><div class="total-lbl${deuda>0?' debt':''}">${deuda>0?'Deuda pendiente':'Al día ✓'}</div><div class="total-val${deuda>0?' debt':''}">$${deuda>0?deuda:paid}</div></div>
