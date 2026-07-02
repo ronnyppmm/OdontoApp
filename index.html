@@ -542,8 +542,8 @@ function renderDashboard(){
   patients.forEach(p=>p.appointments.filter(a=>a.date>todayStr&&a.status!=='completada').forEach(a=>upcoming.push({...a,ptName:p.name,ptId:p.id})));
   upcoming.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
   const bdToday=patients.filter(p=>{if(!p.birthdate)return false;const b=p.birthdate.split('-');return b[1]===String(now.getMonth()+1).padStart(2,'0')&&b[2]===String(now.getDate()).padStart(2,'0');});
-  const mIncome=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
-  const mEgresos=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
+  const mIncome=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date+'T12:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+  const mEgresos=egresos.filter(e=>{const d=new Date(e.fecha+'T12:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
   const pendTx=patients.reduce((s,p)=>s+p.treatments.filter(t=>t.status==='pendiente').length,0);
   // Collect all pending invoices across patients
   const factPend=[];
@@ -994,16 +994,16 @@ function renderEstadisticas(){
   for(let i=5;i>=0;i--){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     const m=d.getMonth(),y=d.getFullYear();
-    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
-    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
+    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date+'T12:00');return pd.getMonth()===m&&pd.getFullYear()===y&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+    const eg=egresos.filter(e=>{const ed=new Date(e.fecha+'T12:00');return ed.getMonth()===m&&ed.getFullYear()===y&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
     months.push({label:MONTHS[m],inc,eg,util:inc-eg});
   }
   const maxVal=Math.max(...months.map(m=>Math.max(m.inc,m.eg)),1);
   const totalDebt=patients.reduce((s,p)=>{const txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0);return s+Math.max(0,txT-paid);},0);
   // Current month totals — only non-archived (reset when month is closed)
   const curM=now.getMonth(),curYr=now.getFullYear();
-  const mInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===curM&&d.getFullYear()===curYr&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
-  const mEg=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===curM&&d.getFullYear()===curYr&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
+  const mInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date+'T12:00');return d.getMonth()===curM&&d.getFullYear()===curYr&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+  const mEg=egresos.filter(e=>{const d=new Date(e.fecha+'T12:00');return d.getMonth()===curM&&d.getFullYear()===curYr&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
   const curMonthName=MONTHS_FULL[now.getMonth()];
 
   // Build yearly archive summary for current year
@@ -1012,8 +1012,8 @@ function renderEstadisticas(){
   const archTotalEg=archYear.reduce((s,a)=>s+a.totalEgresos,0);
 
   // Live months not yet archived
-  const liveInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date);return d.getFullYear()===curY&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
-  const liveEg=egresos.filter(e=>new Date(e.fecha).getFullYear()===curY&&!e.archivado).reduce((s,e)=>s+e.monto,0);
+  const liveInc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const d=new Date(py.date+'T12:00');return d.getFullYear()===curY&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+  const liveEg=egresos.filter(e=>new Date(e.fecha+'T12:00').getFullYear()===curY&&!e.archivado).reduce((s,e)=>s+e.monto,0);
   const yearTotalInc=archTotalInc+liveInc;
   const yearTotalEg=archTotalEg+liveEg;
 
@@ -1156,8 +1156,8 @@ function abrirResetMes(){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     const m=d.getMonth(),y=d.getFullYear();
     const yaArchivado=archivosContables.some(a=>a.mes===m&&a.anio===y);
-    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date);return pd.getMonth()===m&&pd.getFullYear()===y&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
-    const eg=egresos.filter(e=>{const ed=new Date(e.fecha);return ed.getMonth()===m&&ed.getFullYear()===y&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
+    const inc=patients.reduce((s,p)=>s+p.payments.filter(py=>{const pd=new Date(py.date+'T12:00');return pd.getMonth()===m&&pd.getFullYear()===y&&!py.archivado;}).reduce((a,py)=>a+py.amount,0),0);
+    const eg=egresos.filter(e=>{const ed=new Date(e.fecha+'T12:00');return ed.getMonth()===m&&ed.getFullYear()===y&&!e.archivado;}).reduce((s,e)=>s+e.monto,0);
     opts.push({m,y,label:`${MONTHS_FULL[m]} ${y}`,inc,eg,yaArchivado});
   }
   openModal(`<div class="modal-title">🗂 Cerrar y archivar mes</div>
@@ -1192,10 +1192,10 @@ function cerrarMes(m,y){
   const mesNombre=`${MONTHS_FULL[m]} ${y}`;
   const pagos=[];
   patients.forEach(p=>{
-    p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y&&!py.archivado;})
+    p.payments.filter(py=>{const d=new Date(py.date+'T12:00');return d.getMonth()===m&&d.getFullYear()===y&&!py.archivado;})
       .forEach(py=>pagos.push({paciente:p.name,cedula:p.cedula,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type,ptId:p.id,pagoId:py.id}));
   });
-  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y&&!e.archivado;});
+  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha+'T12:00');return d.getMonth()===m&&d.getFullYear()===y&&!e.archivado;});
   const totalIngresos=pagos.reduce((s,p)=>s+p.monto,0);
   const totalEgresos=egresosM.reduce((s,e)=>s+e.monto,0);
 
@@ -1218,13 +1218,13 @@ function cerrarMes(m,y){
   // Mark payments as archived (NOT deleted — cartera pendiente stays correct)
   patients.forEach(p=>{
     p.payments.forEach(py=>{
-      const d=new Date(py.date);
+      const d=new Date(py.date+'T12:00');
       if(d.getMonth()===m&&d.getFullYear()===y)py.archivado=true;
     });
   });
   // Mark egresos as archived
   egresos.forEach(e=>{
-    const d=new Date(e.fecha);
+    const d=new Date(e.fecha+'T12:00');
     if(d.getMonth()===m&&d.getFullYear()===y)e.archivado=true;
   });
 
@@ -1346,10 +1346,10 @@ function descargarInformeMensual(){
   const mesNombre=`${MONTHS_FULL[m]} ${y}`;
   const pagos=[];
   patients.forEach(p=>{
-    p.payments.filter(py=>{const d=new Date(py.date);return d.getMonth()===m&&d.getFullYear()===y;})
+    p.payments.filter(py=>{const d=new Date(py.date+'T12:00');return d.getMonth()===m&&d.getFullYear()===y;})
       .forEach(py=>pagos.push({paciente:p.name,cedula:p.cedula,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type}));
   });
-  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha);return d.getMonth()===m&&d.getFullYear()===y;});
+  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha+'T12:00');return d.getMonth()===m&&d.getFullYear()===y;});
   const totalInc=pagos.reduce((s,p)=>s+p.monto,0);
   const totalEg=egresosM.reduce((s,e)=>s+e.monto,0);
   const pacientes=[...new Set(pagos.map(p=>p.paciente))].length;
