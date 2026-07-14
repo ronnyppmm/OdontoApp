@@ -1891,12 +1891,15 @@ function renderPagos(){
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:6px">
             <div class="row-name">${py.concept}</div>
-            ${py.archivado?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#f1f5f9;color:#64748b;border-radius:10px;border:1px solid #e2e8f0">📦 Archivado</span>`:py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`:`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:10px">✓ Facturado</span>`}
+            ${py.archivado&&py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`
+              :py.archivado?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#f1f5f9;color:#64748b;border-radius:10px;border:1px solid #e2e8f0">📦 Archivado</span>`
+              :py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`
+              :`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:10px">✓ Facturado</span>`}
           </div>
           <div class="row-meta">${fmtDate(py.date)} · ${py.type}</div>
         </div>
         <div class="pay-amount">+$${py.amount}</div>
-        ${!py.archivado&&py.factPendiente?`<button onclick="recordatorioFactura(${py.id})" title="Ver recordatorio de factura" style="padding:5px 8px;background:#f59e0b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:6px">🧾 Facturar</button>`:!py.archivado?`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:6px">✓</button>`:''}
+        ${py.factPendiente?`<button onclick="marcarFacturada(${py.id})" title="Marcar como facturado" style="padding:5px 8px;background:#f59e0b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:6px">🧾 Facturar</button>`:!py.archivado?`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:6px">✓</button>`:''}
         <button class="del-btn" style="margin-left:4px" onclick="delPay(${py.id})">✕</button>
       </div>`).join(''):`<div style="font-size:13px;color:var(--text3)">Sin pagos registrados</div>`}
     <div class="total-bar${deuda>0?' debt':''}"><div class="total-lbl${deuda>0?' debt':''}">${deuda>0?'Deuda pendiente':'Al día ✓'}</div><div class="total-val${deuda>0?' debt':''}">$${deuda>0?deuda:paid}</div></div>
@@ -1968,9 +1971,13 @@ function recordatorioFactura(pago){
 }
 
 function marcarFacturada(pagoId){
-  const pago=curPt.payments.find(x=>x.id===pagoId);
-  if(pago)pago.factPendiente=false;
-  save();closeModal();renderTab();
+  // Search across all patients
+  let found=false;
+  patients.forEach(p=>{
+    const pago=p.payments.find(x=>x.id===pagoId);
+    if(pago){pago.factPendiente=false;found=true;}
+  });
+  if(found){save();if(curPt)renderTab();else showPage('dashboard');}
 }
 
 function renderCitas(){
