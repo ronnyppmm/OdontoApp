@@ -599,6 +599,11 @@ function renderDashboard(){
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let calView = 'month'; // 'month' | 'week' | 'list'
+// Track current week Monday for week view
+let calWeekStart = (()=>{
+  const n=new Date(); const dow=(n.getDay()+6)%7;
+  const m=new Date(n); m.setDate(n.getDate()-dow); m.setHours(0,0,0,0); return m;
+})();
 
 function renderAgendaPage(){
   // Build all appointments (registered patients + quick appointments)
@@ -607,6 +612,11 @@ function renderAgendaPage(){
 
   // Calendar header nav
   const monthName = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][calMonth];
+  let headerLabel = `${monthName} ${calYear}`;
+  if(calView==='week'){
+    const wEnd=new Date(calWeekStart); wEnd.setDate(calWeekStart.getDate()+6);
+    headerLabel=`${calWeekStart.getDate()} ${MONTHS_FULL[calWeekStart.getMonth()]} — ${wEnd.getDate()} ${MONTHS_FULL[wEnd.getMonth()]} ${wEnd.getFullYear()}`;
+  }
 
   const viewButtons = `
     <div style="display:flex;gap:4px">
@@ -619,7 +629,7 @@ function renderAgendaPage(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
     <div style="display:flex;align-items:center;gap:10px">
       <button onclick="calPrev()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
-      <div style="font-size:17px;font-weight:700;color:var(--text);min-width:180px;text-align:center">${monthName} ${calYear}</div>
+      <div style="font-size:17px;font-weight:700;color:var(--text);min-width:180px;text-align:center">${headerLabel}</div>
       <button onclick="calNext()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
       <button onclick="calGoToday()" style="padding:6px 12px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer">Hoy</button>
     </div>
@@ -726,7 +736,7 @@ function renderMonthView(allAppts, todayStr){
   const totalDays = lastDay.getDate();
   const DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
-  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:10px;overflow:hidden">`;
+  let html = `<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--border);border-radius:10px;overflow:hidden">`;
   // Header
   DAYS.forEach(d=>{ html+=`<div style="padding:8px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--text2);background:var(--bg)">${d}</div>`; });
 
@@ -739,14 +749,14 @@ function renderMonthView(allAppts, todayStr){
     const dayAppts=allAppts.filter(a=>a.date===dateStr).sort((a,b)=>a.time.localeCompare(b.time));
     const dow=(startDow+day-1)%7;
     const isWeekend=dow===5||dow===6;
-    html+=`<div onclick="openQuickAppt('${dateStr}')" style="background:${isToday?'#eff6ff':isWeekend?'#fafafa':'var(--card)'};min-height:90px;padding:6px;cursor:pointer;transition:background .1s;position:relative" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${isToday?'#eff6ff':isWeekend?'#fafafa':'var(--card)'}'">
+    html+=`<div onclick="openQuickAppt('${dateStr}')" style="background:${isToday?'#eff6ff':isWeekend?'#fafafa':'var(--card)'};min-height:90px;padding:6px;cursor:pointer;transition:background .1s;overflow:hidden;min-width:0" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${isToday?'#eff6ff':isWeekend?'#fafafa':'var(--card)'}'">
       <div style="font-size:13px;font-weight:${isToday?'700':'500'};color:${isToday?'#fff':'var(--text)'};width:22px;height:22px;border-radius:50%;background:${isToday?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;margin-bottom:3px">${day}</div>
       ${dayAppts.slice(0,3).map(a=>{
         const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
         const tc=a.status==='completada'?'#065f46':a.status==='no_asistio'?'#991b1b':a.type==='quick'?'#92400e':'#1e40af';
-        return`<div onclick="event.stopPropagation();openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="font-size:10px;padding:2px 5px;border-radius:4px;background:${bg};color:${tc};margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${a.time} ${a.ptName}</div>`;
+        return`<div onclick="event.stopPropagation();openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="font-size:10px;padding:2px 4px;border-radius:4px;background:${bg};color:${tc};margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;max-width:100%">${a.time} ${a.ptName}</div>`;
       }).join('')}
-      ${dayAppts.length>3?`<div style="font-size:10px;color:var(--text3);padding:1px 4px">+${dayAppts.length-3} más</div>`:''}
+      ${dayAppts.length>3?`<div style="font-size:10px;color:var(--text3);padding:1px 2px">+${dayAppts.length-3}</div>`:''}
     </div>`;
   }
   // Fill remaining cells
@@ -758,10 +768,8 @@ function renderMonthView(allAppts, todayStr){
 }
 
 function renderWeekView(allAppts, todayStr){
-  // Find Monday of current week based on calYear/calMonth/today
-  const ref=new Date(calYear, calMonth, 1);
-  const dow=(ref.getDay()+6)%7;
-  const monday=new Date(ref); monday.setDate(ref.getDate()-dow);
+  // Use calWeekStart to always show the correct week
+  const monday=new Date(calWeekStart);
   const days=[];
   for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d);}
   const DNAMES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -844,10 +852,47 @@ function listApptRow(a){
   </div>`;
 }
 
-function setCalView(v){ calView=v; showPage('agenda'); }
-function calPrev(){ if(calView==='week'){calMonth--;if(calMonth<0){calMonth=11;calYear--;}}else{calMonth--;if(calMonth<0){calMonth=11;calYear--;}} showPage('agenda'); }
-function calNext(){ if(calView==='week'){calMonth++;if(calMonth>11){calMonth=0;calYear++;}}else{calMonth++;if(calMonth>11){calMonth=0;calYear++;}} showPage('agenda'); }
-function calGoToday(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); showPage('agenda'); }
+function setCalView(v){
+  calView=v;
+  if(v==='week'){
+    // Set calWeekStart to the Monday of the currently viewed month
+    const ref=new Date(calYear,calMonth,1);
+    const dow=(ref.getDay()+6)%7;
+    calWeekStart=new Date(ref);
+    calWeekStart.setDate(ref.getDate()-dow);
+    calWeekStart.setHours(0,0,0,0);
+  }
+  showPage('agenda');
+}
+function calPrev(){
+  if(calView==='week'){
+    calWeekStart=new Date(calWeekStart);
+    calWeekStart.setDate(calWeekStart.getDate()-7);
+    calYear=calWeekStart.getFullYear();
+    calMonth=calWeekStart.getMonth();
+  } else {
+    calMonth--; if(calMonth<0){calMonth=11;calYear--;}
+  }
+  showPage('agenda');
+}
+function calNext(){
+  if(calView==='week'){
+    calWeekStart=new Date(calWeekStart);
+    calWeekStart.setDate(calWeekStart.getDate()+7);
+    calYear=calWeekStart.getFullYear();
+    calMonth=calWeekStart.getMonth();
+  } else {
+    calMonth++; if(calMonth>11){calMonth=0;calYear++;}
+  }
+  showPage('agenda');
+}
+function calGoToday(){
+  const n=new Date();
+  calYear=n.getFullYear(); calMonth=n.getMonth();
+  const dow=(n.getDay()+6)%7;
+  calWeekStart=new Date(n); calWeekStart.setDate(n.getDate()-dow); calWeekStart.setHours(0,0,0,0);
+  showPage('agenda');
+}
 
 // Quick appointment (for patients who message to schedule)
 function openQuickAppt(dateStr, timeStr){
