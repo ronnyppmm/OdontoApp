@@ -11,7 +11,15 @@
   --accent:#0ea5e9;--accent2:#0284c7;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;
   --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--text2:#64748b;--text3:#94a3b8;
 }
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+body.dark-mode{
+  --bg:#0f172a;--card:#1e293b;--border:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
+  --sb:#020617;--sb2:#0f172a;--sb3:#1e293b;
+}
+body.dark-mode .modal{background:#1e293b;border:1px solid #334155}
+body.dark-mode input,body.dark-mode textarea,body.dark-mode select{background:#0f172a!important;color:#f1f5f9!important;border-color:#334155!important}
+body.dark-mode .receta-preview,body.dark-mode .fact-demo{background:#1e293b!important;color:#f1f5f9!important}
+body.dark-mode .diary-item{background:#1e293b;border-color:#334155}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;transition:background .2s,color .2s}
 .app{display:flex;height:100vh}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:4px}
 
@@ -248,11 +256,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>Estadísticas</span>
     </div>
-    <div class="sb-item" id="nav-facturacion" onclick="showPage('facturacion')">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      <span>Facturación</span>
-    </div>
-    <div class="sb-item" id="nav-configuracion" onclick="openLogoEdit()">
+    <div class="sb-item" id="nav-configuracion" onclick="showPage('configuracion')">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span>Configuración</span>
     </div>
@@ -286,7 +290,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="tb-title" id="ptTitle">Dashboard</div>
       <span class="tb-badge" id="ptBadge" style="display:none"></span>
     </div>
-    <div class="tb-right" id="topActions"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="darkToggle" onclick="toggleDarkMode()" title="Modo oscuro" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s">🌙</button>
+      <div class="tb-right" id="topActions"></div>
+    </div>
   </div>
   <div class="tabs" id="tabsBar" style="display:none">
     <div class="tab active" onclick="switchTab('datos',this)">Datos</div>
@@ -297,6 +304,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
     <div class="tab" onclick="switchTab('citas',this)">Citas</div>
     <div class="tab" onclick="switchTab('imagenes',this)">📷 Imágenes</div>
     <div class="tab" onclick="switchTab('consentimientos',this)">📋 Consentimientos</div>
+    <div class="tab" onclick="switchTab('presupuestos',this)">💰 Presupuesto</div>
     <div class="tab" onclick="switchTab('recetas',this)">💊 Recetas</div>
   </div>
   <div class="content" id="mainContent"></div>
@@ -390,8 +398,8 @@ function legSVG(item,isSurf){
 const COLORS=['#0ea5e9','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4'];
 const MONTHS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MONTHS_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-let patients=[],egresos=[],facturas=[],quickAppts=[],archivosContables=[],curPt=null,curTab='datos',curPage='dashboard';
-let selOdoTooth=null,selOdoZone=null,nextId=1,nextEgId=1,nextFactId=1,nextRecetaId=1,logoColor='#0ea5e9',logoImg=null;
+let patients=[],egresos=[],facturas=[],quickAppts=[],archivosContables=[],servicios=[],curPt=null,curTab='datos',curPage='dashboard';
+let selOdoTooth=null,selOdoZone=null,nextId=1,nextEgId=1,nextFactId=1,nextRecetaId=1,nextPresupId=1,logoColor='#0ea5e9',logoImg=null;
 let clinicaRUC='',clinicaDireccion='',clinicaTelefono='';
 
 function initials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase()}
@@ -419,6 +427,7 @@ function save(){
   localStorage.setItem('oa3_neg',nextEgId);
   localStorage.setItem('oa3_nfact',nextFactId);
   localStorage.setItem('oa3_nreceta',nextRecetaId);
+  localStorage.setItem('oa3_npresup',nextPresupId);
   localStorage.setItem('oa3_logo',JSON.stringify({
     text:document.getElementById('logoText').textContent,
     prof:document.getElementById('logoProfesional').textContent,
@@ -426,6 +435,7 @@ function save(){
     ruc:clinicaRUC,dir:clinicaDireccion,tel:clinicaTelefono
   }));
   localStorage.setItem('oa3_arch',JSON.stringify(archivosContables));
+  localStorage.setItem('oa3_svc',JSON.stringify(servicios));
   sbAutoSync();
 }
 
@@ -433,7 +443,7 @@ function load(){
   const p=localStorage.getItem('oa3_pts');
   if(p){patients=JSON.parse(p);patients.forEach(pt=>{
     ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
-    ['treatments','payments','appointments','diary','images','consents','recetas'].forEach(k=>{if(!pt[k])pt[k]=[];});
+    ['treatments','payments','appointments','diary','images','consents','recetas','presupuestos'].forEach(k=>{if(!pt[k])pt[k]=[];});
     // Migrate: remove stored age, use calcAge from birthdate
     if(pt.birthdate&&pt.age!==undefined) delete pt.age;
   });}
@@ -443,7 +453,9 @@ function load(){
   const neg=localStorage.getItem('oa3_neg');if(neg)nextEgId=parseInt(neg);
   const nfact=localStorage.getItem('oa3_nfact');if(nfact)nextFactId=parseInt(nfact);
   const nrec=localStorage.getItem('oa3_nreceta');if(nrec)nextRecetaId=parseInt(nrec);
+  const npresup=localStorage.getItem('oa3_npresup');if(npresup)nextPresupId=parseInt(npresup);
   const arch=localStorage.getItem('oa3_arch');if(arch)archivosContables=JSON.parse(arch);
+  const svc=localStorage.getItem('oa3_svc');if(svc)servicios=JSON.parse(svc);
   const logo=localStorage.getItem('oa3_logo');
   if(logo){
     const l=JSON.parse(logo);
@@ -500,9 +512,9 @@ function showPage(page){
   document.getElementById('topActions').innerHTML='';
   document.getElementById('tabsBar').style.display='none';
   renderSidebar();
-  const titles={dashboard:'Dashboard',agenda:'Agenda de Citas',estadisticas:'Estadísticas',facturacion:'Facturación'};
+  const titles={dashboard:'Dashboard',agenda:'Agenda de Citas',estadisticas:'Estadísticas',configuracion:'⚙️ Configuración'};
   document.getElementById('ptTitle').textContent=titles[page]||'Dashboard';
-  const fns={dashboard:renderDashboard,agenda:renderAgendaPage,estadisticas:renderEstadisticas,facturacion:renderFacturacion};
+  const fns={dashboard:renderDashboard,agenda:renderAgendaPage,estadisticas:renderEstadisticas,configuracion:renderConfiguracion};
   if(fns[page]) document.getElementById('mainContent').innerHTML=fns[page]();
 }
 
@@ -527,7 +539,7 @@ function switchTab(tab,el){
 }
 
 function renderTab(){
-  const fns={datos:renderDatos,diario:renderDiario,odontograma:renderOdontograma,tratamientos:renderTratamientos,pagos:renderPagos,citas:renderCitas,imagenes:renderImagenes,consentimientos:renderConsentimientos,recetas:renderRecetas};
+  const fns={datos:renderDatos,diario:renderDiario,odontograma:renderOdontograma,tratamientos:renderTratamientos,pagos:renderPagos,citas:renderCitas,imagenes:renderImagenes,consentimientos:renderConsentimientos,recetas:renderRecetas,presupuestos:renderPresupuestos};
   document.getElementById('mainContent').innerHTML=(fns[curTab]||renderDatos)();
 }
 
@@ -1415,202 +1427,6 @@ function saveEgreso(){
   save();closeModal();showPage('estadisticas');
 }
 function delEgreso(id){if(!confirm('¿Eliminar este egreso?'))return;egresos=egresos.filter(e=>e.id!==id);save();showPage('estadisticas');}
-
-// ═══ FACTURACIÓN SRI ECUADOR ═══
-function renderFacturacion(){
-  const clinicaNombre=document.getElementById('logoText').textContent;
-  const profesional=document.getElementById('logoProfesional').textContent;
-  return`
-  <div class="grid2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="action-row"><div class="card-title" style="margin:0">Facturas emitidas</div><button class="btn-primary" onclick="openNuevaFactura()">+ Nueva factura</button></div>
-      ${facturas.length?facturas.slice().reverse().map(f=>`
-        <div class="row-item">
-          <div style="flex:1">
-            <div class="row-name">FAC-${String(f.id).padStart(9,'0')}</div>
-            <div class="row-meta">${f.clienteNombre} · ${fmtDate(f.fecha)}</div>
-          </div>
-          <div style="text-align:right;margin-right:10px">
-            <div style="font-size:13px;font-weight:700;color:var(--green)">$${f.total.toFixed(2)}</div>
-            <span class="badge ${f.estado==='AUTORIZADA'?'badge-green':'badge-amber'}" style="font-size:9px">${f.estado}</span>
-          </div>
-          <button class="btn-sm" style="font-size:11px;padding:4px 10px" onclick="verFactura(${f.id})">Ver</button>
-          <button class="del-btn" style="margin-left:4px" onclick="delFactura(${f.id})">✕</button>
-        </div>`).join(''):`<div style="font-size:13px;color:var(--text3);padding:8px 0">Sin facturas emitidas. Crea la primera factura.</div>`}
-    </div>
-    <div class="card">
-      <div class="card-title">Resumen de facturación</div>
-      ${(() => {
-        const now=new Date();
-        const mes=facturas.filter(f=>{const d=new Date(f.fecha);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
-        const totalMes=mes.reduce((s,f)=>s+f.total,0);
-        const totalBase=mes.reduce((s,f)=>s+(f.subtotal0||f.total||0),0);
-        return`
-        <div class="grid2" style="gap:8px;margin-bottom:12px">
-          <div class="kpi" style="padding:12px"><div class="kpi-label">Facturas este mes</div><div class="kpi-val" style="font-size:20px">${mes.length}</div></div>
-          <div class="kpi" style="padding:12px"><div class="kpi-label">Total facturado mes</div><div class="kpi-val" style="font-size:20px;color:var(--green)">$${totalMes.toFixed(2)}</div></div>
-        </div>
-        <div><div class="fl">Subtotal servicios de salud (tarifa 0%)</div><div class="fv">$${totalBase.toFixed(2)}</div></div>
-        <div style="margin-top:8px;padding:10px;background:#d1fae5;border-radius:8px;border:1px solid #6ee7b7">
-          <div style="font-size:11px;font-weight:600;color:#065f46;margin-bottom:3px">✓ Servicios de salud — IVA 0%</div>
-          <div style="font-size:11px;color:#047857">Los servicios odontológicos están exentos de IVA según el Art. 56 de la Ley de Régimen Tributario Interno del Ecuador.</div>
-        </div>
-        <div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:8px">
-          <div style="font-size:11px;color:var(--text2)">RUC: ${clinicaRUC||'No configurado'}</div>
-        </div>`;
-      })()}
-    </div>
-  </div>
-
-  ${facturas.length?`<div class="card">
-    <div class="card-title">Última factura emitida — Vista previa</div>
-    ${renderFacturaPreview(facturas[facturas.length-1])}
-  </div>`:''}`;
-}
-
-function renderFacturaPreview(f){
-  const clinicaNombre=document.getElementById('logoText').textContent;
-  const profesional=document.getElementById('logoProfesional').textContent;
-  const logoHtml=logoImg?`<img src="${logoImg}" style="width:48px;height:48px;object-fit:contain;border-radius:6px">`:`<div style="width:48px;height:48px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 2C9.2 2 7 4.2 7 7c0 2 1 4 2.2 5.2L10.5 21c.2.8.8 1 1.5 1s1.3-.2 1.5-1l1.3-8.8C16 11 17 9 17 7c0-2.8-2.2-5-5-5z"/></svg></div>`;
-  return`<div class="fact-preview">
-    ${f.autorizacion?`<div class="fact-autorizacion"><div class="fact-auth-label">Autorización SRI</div><div class="fact-auth-num">${f.autorizacion}</div></div>`:''}
-    <div class="fact-header">
-      <div class="fact-logo-area">
-        ${logoHtml}
-        <div>
-          <div class="fact-company">${clinicaNombre}</div>
-          <div class="fact-ruc">RUC: ${clinicaRUC||'—'}</div>
-          <div class="fact-ruc">${clinicaDireccion||'—'}</div>
-          <div class="fact-ruc">Tel: ${clinicaTelefono||'—'}</div>
-          <div class="fact-ruc">${profesional}</div>
-        </div>
-      </div>
-      <div class="fact-title-box">
-        <div class="ft">FACTURA</div>
-        <div class="fn">N° ${String(f.id).padStart(9,'0')}</div>
-        <div style="font-size:10px;margin-top:4px">Fecha: ${fmtDate(f.fecha)}</div>
-        <div style="font-size:10px">Ambiente: ${f.ambiente||'PRODUCCIÓN'}</div>
-      </div>
-    </div>
-    <div class="fact-info-grid">
-      <div class="fact-info-block">
-        <div class="fact-info-label">Razón Social / Nombre</div>
-        <div class="fact-info-val">${f.clienteNombre}</div>
-      </div>
-      <div class="fact-info-block">
-        <div class="fact-info-label">RUC / Cédula</div>
-        <div class="fact-info-val">${f.clienteCedula||'0000000000'}</div>
-      </div>
-      <div class="fact-info-block">
-        <div class="fact-info-label">Dirección</div>
-        <div class="fact-info-val">${f.clienteDireccion||'—'}</div>
-      </div>
-      <div class="fact-info-block">
-        <div class="fact-info-label">Teléfono</div>
-        <div class="fact-info-val">${f.clienteTelefono||'—'}</div>
-      </div>
-    </div>
-    <table class="fact-table">
-      <thead><tr><th>Cant.</th><th>Descripción</th><th>P. Unitario</th><th>Descuento</th><th>Total</th></tr></thead>
-      <tbody>
-        ${f.items.map(i=>`<tr><td>${i.cantidad}</td><td>${i.descripcion}</td><td>$${i.precio.toFixed(2)}</td><td>$${(i.descuento||0).toFixed(2)}</td><td>$${((i.cantidad*i.precio)-(i.descuento||0)).toFixed(2)}</td></tr>`).join('')}
-      </tbody>
-    </table>
-    <div class="fact-totals">
-      <div class="fact-total-row"><span style="color:var(--text2)">Subtotal tarifa 0% (Salud):</span><span>$${(f.subtotal0||f.total||0).toFixed(2)}</span></div>
-      <div class="fact-total-row"><span style="color:var(--text2)">IVA 0% (Servicio de salud exento):</span><span>$0.00</span></div>
-      <div class="fact-total-row final"><span>TOTAL:</span><span>$${f.total.toFixed(2)}</span></div>
-    </div>
-    <div class="fact-footer">
-      <div>Forma de pago: ${f.formaPago||'Efectivo'}</div>
-      <div style="margin-top:4px">Este documento es una representación impresa de la Factura Electrónica generada y autorizada electrónicamente por el SRI</div>
-    </div>
-  </div>`;
-}
-
-function openNuevaFactura(){
-  const ptOptions=patients.map(p=>`<option value="${p.id}" data-ced="${p.cedula}" data-phone="${p.phone}">${p.name}</option>`).join('');
-  openModal(`<div class="modal-title">Nueva Factura — SRI Ecuador</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-    <div class="form-group"><label>Fecha</label><input id="f_fdate" type="date" value="${today()}"></div>
-    <div class="form-group"><label>Forma de pago</label><select id="f_fpago"><option>Efectivo</option><option>Tarjeta de crédito</option><option>Tarjeta de débito</option><option>Transferencia</option><option>Cheque</option></select></div>
-    <div class="form-group"><label>Ambiente</label><select id="f_famb"><option value="PRODUCCIÓN">Producción</option><option value="PRUEBAS">Pruebas</option></select></div>
-  </div>
-  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">Datos del cliente</div>
-    <div class="form-row"><div class="form-group"><label>Seleccionar paciente</label><select id="f_fpt" onchange="fillClienteFact()">${'<option value="">-- Manual --</option>'+ptOptions}</select></div><div class="form-group"><label>Cédula / RUC</label><input id="f_fced" placeholder="0000000000001"></div></div>
-    <div class="form-row"><div class="form-group"><label>Nombre / Razón social *</label><input id="f_fnombre" placeholder="Nombre completo"></div><div class="form-group"><label>Teléfono</label><input id="f_ftel"></div></div>
-    <div class="form-row form-full"><div class="form-group"><label>Dirección</label><input id="f_fdir" placeholder="Dirección del cliente"></div></div>
-  </div>
-  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">Detalle de servicios</div>
-    <div id="fact-items"></div>
-    <button onclick="addFactItem()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:6px 0;font-weight:600">+ Agregar servicio</button>
-  </div>
-  <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveFactura()">Emitir factura</button></div>`);
-  addFactItem();
-}
-
-let factItemCount=0;
-function addFactItem(){
-  factItemCount++;
-  const id=factItemCount;
-  const div=document.createElement('div');
-  div.id=`fact-item-${id}`;
-  div.style.cssText='display:grid;grid-template-columns:1fr 3fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
-  div.innerHTML=`
-    <div class="form-group"><label>Cant.</label><input type="number" id="fi_cant_${id}" value="1" min="1"></div>
-    <div class="form-group"><label>Descripción *</label><input id="fi_desc_${id}" placeholder="Consulta dental, extracción..."></div>
-    <div class="form-group"><label>Precio $</label><input type="number" id="fi_precio_${id}" value="0" step="0.01" min="0"></div>
-    <div class="form-group"><label>Desc. $</label><input type="number" id="fi_desc2_${id}" value="0" step="0.01" min="0"></div>
-    <button onclick="document.getElementById('fact-item-${id}').remove()" style="padding:9px 10px;border:1px solid #fca5a5;border-radius:9px;background:#fee2e2;color:#991b1b;cursor:pointer;margin-top:14px">✕</button>`;
-  document.getElementById('fact-items').appendChild(div);
-}
-
-function fillClienteFact(){
-  const sel=document.getElementById('f_fpt');
-  const ptId=parseInt(sel.value);
-  if(!ptId)return;
-  const p=patients.find(x=>x.id===ptId);
-  if(!p)return;
-  document.getElementById('f_fnombre').value=p.name;
-  document.getElementById('f_fced').value=p.cedula;
-  document.getElementById('f_ftel').value=p.phone;
-}
-
-function saveFactura(){
-  const nombre=v('f_fnombre').trim();if(!nombre){alert('El nombre del cliente es obligatorio');return;}
-  const items=[];
-  document.querySelectorAll('[id^="fact-item-"]').forEach(row=>{
-    const id=row.id.replace('fact-item-','');
-    const desc=document.getElementById(`fi_desc_${id}`)?.value?.trim();
-    if(!desc)return;
-    const cant=parseFloat(document.getElementById(`fi_cant_${id}`)?.value)||1;
-    const precio=parseFloat(document.getElementById(`fi_precio_${id}`)?.value)||0;
-    const desc2=parseFloat(document.getElementById(`fi_desc2_${id}`)?.value)||0;
-    items.push({cantidad:cant,descripcion:desc,precio,descuento:desc2});
-  });
-  if(items.length===0){alert('Agrega al menos un servicio');return;}
-  const subtotal0=items.reduce((s,i)=>s+(i.cantidad*i.precio-i.descuento),0);
-  const iva=0;
-  const total=subtotal0;
-  facturas.push({
-    id:nextFactId++,fecha:v('f_fdate'),formaPago:v('f_fpago'),ambiente:v('f_famb'),
-    clienteNombre:nombre,clienteCedula:v('f_fced'),clienteTelefono:v('f_ftel'),clienteDireccion:v('f_fdir'),
-    items,subtotal:0,subtotal0,iva,total,estado:'AUTORIZADA',autorizacion:genAutorizacion()
-  });
-  save();closeModal();showPage('facturacion');
-}
-
-function verFactura(id){
-  const f=facturas.find(x=>x.id===id);if(!f)return;
-  openModal(`<div class="modal-title">Factura N° ${String(f.id).padStart(9,'0')}</div>${renderFacturaPreview(f)}
-  <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button><button class="btn-primary" onclick="window.print()">Imprimir</button></div>`);
-  document.getElementById('modalContent').parentElement.querySelector('.modal').style.width='700px';
-}
-
-function delFactura(id){if(!confirm('¿Anular esta factura?'))return;facturas=facturas.filter(f=>f.id!==id);save();showPage('facturacion');}
-
 // ═══ PATIENT TABS ═══
 function renderDatos(){
   const p=curPt;
@@ -1901,11 +1717,28 @@ function renderTratamientos(){
 function markDone(id){const t=curPt.treatments.find(x=>x.id===id);if(t){t.status='realizado';save();renderTab();}}
 function delTx(id){if(!confirm('¿Eliminar?'))return;curPt.treatments=curPt.treatments.filter(x=>x.id!==id);save();renderTab();}
 function openAddTx(){
+  const svcHtml=servicios.length?`
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">⚡ Seleccionar del catálogo</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${servicios.map(s=>`<button onclick="seleccionarServicioTx('${s.nombre.replace(/'/g,"\\'")}',${s.precio})" style="padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--bg);font-size:12px;cursor:pointer;color:var(--text);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">${s.nombre} <span style="font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</span></button>`).join('')}
+      </div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
+    </div>`:'';
   openModal(`<div class="modal-title">Agregar tratamiento</div>
+  ${svcHtml}
   <div class="form-row form-full"><div class="form-group"><label>Tratamiento *</label><input id="f_txn" placeholder="Obturación resina, Extracción..."></div></div>
   <div class="form-row"><div class="form-group"><label>Diente(s)</label><input id="f_txt" placeholder="36, General"></div><div class="form-group"><label>Fecha</label><input id="f_txd" type="date" value="${today()}"></div></div>
-  <div class="form-row"><div class="form-group"><label>Costo ($)</label><input id="f_txc" type="number" min="0"></div><div class="form-group"><label>Estado</label><select id="f_txs"><option value="pendiente">Pendiente</option><option value="realizado">Realizado</option></select></div></div>
+  <div class="form-row"><div class="form-group"><label>Costo ($)</label><input id="f_txc" type="number" min="0" step="0.01"></div><div class="form-group"><label>Estado</label><select id="f_txs"><option value="pendiente">Pendiente</option><option value="realizado">Realizado</option></select></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveTx()">Guardar</button></div>`);
+}
+
+function seleccionarServicioTx(nombre,precio){
+  const n=document.getElementById('f_txn');
+  const c=document.getElementById('f_txc');
+  if(n)n.value=nombre;
+  if(c)c.value=precio.toFixed(2);
+  n?.focus();
 }
 function saveTx(){const name=v('f_txn').trim();if(!name)return;curPt.treatments.push({id:Date.now(),name,tooth:v('f_txt')||'General',date:v('f_txd'),cost:parseFloat(v('f_txc'))||0,status:v('f_txs')});save();closeModal();renderTab();}
 
@@ -1952,11 +1785,28 @@ function renderPagos(){
 }
 function delPay(id){if(!confirm('¿Eliminar?'))return;curPt.payments=curPt.payments.filter(x=>x.id!==id);save();renderTab();}
 function openAddPay(){
+  const svcHtml=servicios.length?`
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">⚡ Seleccionar del catálogo</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${servicios.map(s=>`<button onclick="seleccionarServicioPay('${s.nombre.replace(/'/g,"\\'")}',${s.precio})" style="padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--bg);font-size:12px;cursor:pointer;color:var(--text);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">${s.nombre} <span style="font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</span></button>`).join('')}
+      </div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
+    </div>`:'';
   openModal(`<div class="modal-title">Registrar pago</div>
-  <div class="form-row form-full"><div class="form-group"><label>Concepto</label><input id="f_pyc" placeholder="Abono, pago total..."></div></div>
-  <div class="form-row"><div class="form-group"><label>Monto ($) *</label><input id="f_pya" type="number" min="0"></div><div class="form-group"><label>Fecha</label><input id="f_pyd" type="date" value="${today()}"></div></div>
+  ${svcHtml}
+  <div class="form-row form-full"><div class="form-group"><label>Concepto</label><input id="f_pyc" placeholder="Abono, pago total, nombre del servicio..."></div></div>
+  <div class="form-row"><div class="form-group"><label>Monto ($) *</label><input id="f_pya" type="number" min="0" step="0.01"></div><div class="form-group"><label>Fecha</label><input id="f_pyd" type="date" value="${today()}"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Forma de pago</label><select id="f_pyt"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta de crédito</option><option>Tarjeta de débito</option><option>Cheque</option></select></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="savePay()">Guardar pago</button></div>`);
+}
+
+function seleccionarServicioPay(nombre,precio){
+  const c=document.getElementById('f_pyc');
+  const a=document.getElementById('f_pya');
+  if(c)c.value=nombre;
+  if(a)a.value=precio.toFixed(2);
+  a?.focus();
 }
 function savePay(){
   const amt=parseFloat(v('f_pya'));
@@ -2292,6 +2142,150 @@ function delConsent(id){
   save();renderTab();
 }
 
+// ═══ DARK MODE ═══
+function toggleDarkMode(){
+  const dark=document.body.classList.toggle('dark-mode');
+  localStorage.setItem('oa3_dark',dark?'1':'0');
+  document.getElementById('darkToggle').textContent=dark?'☀️':'🌙';
+}
+
+// ═══ CONFIGURACIÓN (página completa) ═══
+function renderConfiguracion(){
+  const COLS=['#0ea5e9','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4','#0f172a'];
+  const dark=document.body.classList.contains('dark-mode');
+  return`
+  <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+
+    <div class="card">
+      <div class="card-title">🏥 Datos de la clínica</div>
+      <div class="form-row form-full"><div class="form-group"><label>Nombre del consultorio</label><input id="cfg_ln" value="${document.getElementById('logoText').textContent}"></div></div>
+      <div class="form-row form-full"><div class="form-group"><label>Profesional a cargo</label><input id="cfg_lprof" value="${document.getElementById('logoProfesional').textContent}" placeholder="Dr. Nombre Apellido"></div></div>
+      <div class="form-row"><div class="form-group"><label>RUC</label><input id="cfg_ruc" value="${clinicaRUC}" placeholder="1712345678001"></div><div class="form-group"><label>Teléfono</label><input id="cfg_tel" value="${clinicaTelefono}" placeholder="02-234-5678"></div></div>
+      <div class="form-row form-full"><div class="form-group"><label>Dirección</label><input id="cfg_dir" value="${clinicaDireccion}" placeholder="Av. Principal 123, Quito"></div></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:4px"><button class="btn-primary" onclick="guardarClinica(event)">💾 Guardar datos</button></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎨 Logo y apariencia</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Logo del consultorio</label>
+          <div class="upload-area" onclick="document.getElementById('logoFileInput').click()" style="padding:14px;text-align:center">
+            ${logoImg?`<img src="${logoImg}" style="height:50px;object-fit:contain;border-radius:6px;display:block;margin:0 auto 6px"><div style="font-size:11px;color:var(--text2)">Clic para cambiar</div>`:`<div style="font-size:28px;margin-bottom:4px">🖼️</div><div style="font-size:12px;color:var(--text2)">Subir logo (PNG, JPG)</div>`}
+          </div>
+          <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="handleLogoUpload(event);setTimeout(()=>showPage('configuracion'),200)">
+          ${logoImg?`<button onclick="clearLogo();showPage('configuracion')" style="margin-top:6px;font-size:11px;color:var(--red);background:none;border:none;cursor:pointer">✕ Quitar logo</button>`:''}
+        </div>
+        <div class="form-group">
+          <label>Color de acento</label>
+          <div class="color-swatches">${COLS.map(c=>`<div class="cs${c===logoColor?' sel':''}" style="background:${c}" onclick="applyColor('${c}');save();showPage('configuracion')"></div>`).join('')}</div>
+          <label style="margin-top:14px;display:block">Modo de visualización</label>
+          <div style="display:flex;gap:10px;margin-top:6px">
+            <button onclick="if(!document.body.classList.contains('dark-mode')){toggleDarkMode();showPage('configuracion')}" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${dark?'var(--accent)':'var(--border)'};background:${dark?'var(--accent)':'var(--card)'};color:${dark?'#fff':'var(--text2)'};cursor:pointer;font-size:13px;font-weight:600">🌙 Oscuro</button>
+            <button onclick="if(document.body.classList.contains('dark-mode')){toggleDarkMode();showPage('configuracion')}" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${!dark?'var(--accent)':'var(--border)'};background:${!dark?'var(--accent)':'var(--card)'};color:${!dark?'#fff':'var(--text2)'};cursor:pointer;font-size:13px;font-weight:600">☀️ Claro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🦷 Catálogo de servicios</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Aparecen como atajo al registrar tratamientos y pagos.</div>
+      <div style="max-height:220px;overflow-y:auto;margin-bottom:12px">
+        ${servicios.length===0?`<div style="font-size:12px;color:var(--text3);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Sin servicios configurados</div>`
+        :servicios.map((s,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
+            <div style="flex:1"><div style="font-size:13px;color:var(--text);font-weight:500">${s.nombre}</div><div style="font-size:10px;color:var(--text3)">${s.categoria}</div></div>
+            <div style="font-size:14px;font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</div>
+            <button onclick="eliminarServicioCfg(${i})" style="padding:4px 10px;font-size:11px;background:#fee2e2;color:var(--red);border:none;border-radius:6px;cursor:pointer;font-weight:600">✕</button>
+          </div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end">
+        <div class="form-group" style="margin:0"><label>Nombre</label><input type="text" id="cfg_svcnombre" placeholder="Obturación resina..." onkeydown="if(event.key==='Enter')agregarServicioCfg()"></div>
+        <div class="form-group" style="margin:0"><label>Precio ($)</label><input type="number" id="cfg_svcprecio" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="form-group" style="margin:0"><label>Categoría</label><select id="cfg_svccategoria"><option>Prevención</option><option>Operatoria</option><option>Endodoncia</option><option>Cirugía</option><option>Ortodoncia</option><option>Prótesis</option><option>Periodoncia</option><option>Estética</option><option>Radiología</option><option>General</option></select></div>
+        <button onclick="agregarServicioCfg()" class="btn-primary" style="padding:9px 14px;margin-bottom:1px">+</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💊 Medicamentos en recetas</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Sugerencias al crear una receta médica.</div>
+      <div style="max-height:180px;overflow-y:auto;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px">
+        ${MEDICAMENTOS_COMUNES.map((m,i)=>`
+          <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text)">
+            💊 ${m}
+            <button onclick="eliminarMedCfg(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;line-height:1;padding:0 2px">×</button>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="cfg_newmed" placeholder="Ej: Amoxicilina 875mg" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:var(--card);color:var(--text)" onkeydown="if(event.key==='Enter')agregarMedCfg()">
+        <button onclick="agregarMedCfg()" class="btn-primary">+ Agregar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 Mensaje recordatorio WhatsApp</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Variables: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{nombre}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{fecha}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{hora}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{motivo}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{clinica}</code></div>
+      <textarea id="cfg_wamsg" style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;line-height:1.6;background:var(--card);color:var(--text)">${localStorage.getItem('oa3_wamsg')||getDefaultWAMsg()}</textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-primary" onclick="guardarWAMsg(event)">💾 Guardar mensaje</button></div>
+    </div>
+
+    <div class="card" style="border:1px solid #fca5a5">
+      <div class="card-title" style="color:var(--red)">⚠️ Zona de peligro</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Esta acción es irreversible. Descarga un backup antes de proceder.</div>
+      <button onclick="factoryReset()" style="padding:12px 24px;background:#ef4444;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🗑 Restablecer app a valores de fábrica</button>
+    </div>
+  </div>`;
+}
+
+function guardarClinica(e){
+  const n=document.getElementById('cfg_ln')?.value?.trim();
+  const prof=document.getElementById('cfg_lprof')?.value?.trim();
+  if(n)document.getElementById('logoText').textContent=n;
+  if(prof)document.getElementById('logoProfesional').textContent=prof;
+  clinicaRUC=document.getElementById('cfg_ruc')?.value||'';
+  clinicaTelefono=document.getElementById('cfg_tel')?.value||'';
+  clinicaDireccion=document.getElementById('cfg_dir')?.value||'';
+  save();renderSidebar();
+  const btn=e.target;btn.textContent='✓ Guardado';btn.style.background='var(--green)';
+  setTimeout(()=>{btn.textContent='💾 Guardar datos';btn.style.background='';},2000);
+}
+
+function guardarWAMsg(e){
+  const msg=document.getElementById('cfg_wamsg')?.value?.trim();
+  if(msg)localStorage.setItem('oa3_wamsg',msg);
+  const btn=e.target;btn.textContent='✓ Guardado';btn.style.background='var(--green)';
+  setTimeout(()=>{btn.textContent='💾 Guardar mensaje';btn.style.background='';},2000);
+}
+
+function agregarServicioCfg(){
+  const nombre=document.getElementById('cfg_svcnombre')?.value?.trim();
+  const precio=parseFloat(document.getElementById('cfg_svcprecio')?.value)||0;
+  const categoria=document.getElementById('cfg_svccategoria')?.value||'General';
+  if(!nombre){alert('Escribe el nombre del servicio');return;}
+  servicios.push({id:Date.now(),nombre,precio,categoria});
+  save();showPage('configuracion');
+}
+
+function eliminarServicioCfg(idx){
+  if(!confirm(`¿Eliminar "${servicios[idx]?.nombre}"?`))return;
+  servicios.splice(idx,1);save();showPage('configuracion');
+}
+
+function agregarMedCfg(){
+  const input=document.getElementById('cfg_newmed');
+  const nombre=input?.value?.trim();
+  if(!nombre){alert('Escribe el nombre del medicamento');return;}
+  if(MEDICAMENTOS_COMUNES.includes(nombre)){alert('Ya existe en la lista');return;}
+  MEDICAMENTOS_COMUNES.push(nombre);saveMeds();showPage('configuracion');
+}
+
+function eliminarMedCfg(idx){
+  if(!confirm(`¿Eliminar "${MEDICAMENTOS_COMUNES[idx]}"?`))return;
+  MEDICAMENTOS_COMUNES.splice(idx,1);saveMeds();showPage('configuracion');
+}
+
 // ═══ PATIENTS CRUD ═══
 function openNewPt(){
   openModal(`<div class="modal-title">Nuevo paciente</div>
@@ -2304,7 +2298,7 @@ function openNewPt(){
 }
 function saveNewPt(){
   const name=v('f_name').trim();if(!name){alert('El nombre es obligatorio');return;}
-  patients.push({id:nextId++,name,cedula:v('f_ced'),birthdate:v('f_birth'),phone:v('f_phone'),email:v('f_email'),alergias:v('f_al'),antecedentes:v('f_ant'),surfData:{},wholeData:{},diary:[],treatments:[],payments:[],appointments:[],images:[],consents:[],recetas:[]});
+  patients.push({id:nextId++,name,cedula:v('f_ced'),birthdate:v('f_birth'),phone:v('f_phone'),email:v('f_email'),alergias:v('f_al'),antecedentes:v('f_ant'),surfData:{},wholeData:{},diary:[],treatments:[],payments:[],appointments:[],images:[],consents:[],recetas:[],presupuestos:[]});
   save();closeModal();renderSidebar();selectPt(patients[patients.length-1].id);
 }
 function editPt(){
@@ -2383,7 +2377,26 @@ function openLogoEdit(){
   </div>
 
   <div style="border-top:1px solid var(--border);margin:16px 0 12px"></div>
-  <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📱 Mensaje de recordatorio WhatsApp</div>
+  <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">🦷 Catálogo de servicios</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Define tus servicios con precio base. Aparecerán como atajo al registrar tratamientos y pagos.</div>
+  <div id="svc-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:10px;background:var(--bg)">
+    ${servicios.length===0?`<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center">Sin servicios — agrega el primero abajo</div>`
+    :servicios.map((s,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:var(--card);border-radius:7px;margin-bottom:4px;border:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--text);font-weight:500">${s.nombre}</div>
+          <div style="font-size:10px;color:var(--text3)">${s.categoria||'General'}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</div>
+        <button onclick="eliminarServicio(${i})" style="padding:3px 8px;font-size:11px;background:#fee2e2;color:var(--red);border:none;border-radius:5px;cursor:pointer;font-weight:600">✕</button>
+      </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:6px">
+    <div class="form-group" style="margin:0"><label>Nombre del servicio</label><input type="text" id="f_svcnombre" placeholder="Obturación resina, Extracción..."></div>
+    <div class="form-group" style="margin:0"><label>Precio ($)</label><input type="number" id="f_svcprecio" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="form-group" style="margin:0"><label>Categoría</label><select id="f_svccategoria"><option>Prevención</option><option>Operatoria</option><option>Endodoncia</option><option>Cirugía</option><option>Ortodoncia</option><option>Prótesis</option><option>Periodoncia</option><option>Estética</option><option>Radiología</option><option>General</option></select></div>
+    <button onclick="agregarServicio()" class="btn-primary" style="padding:8px 14px;margin-bottom:1px">+ Agregar</button>
+  </div>
   <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Usa estas variables en el mensaje: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{nombre}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{fecha}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{hora}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{motivo}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{clinica}</code></div>
   <div class="form-group">
     <textarea id="f_wamsg" style="min-height:110px;font-size:13px;line-height:1.6">${localStorage.getItem('oa3_wamsg')||getDefaultWAMsg()}</textarea>
@@ -2464,7 +2477,8 @@ function factoryReset(){
   if(!confirm('⚠️ ¿Estás seguro?\n\nEsto eliminará TODOS los datos:\n• Pacientes y su historial\n• Facturas y egresos\n• Recetas y consentimientos\n• Configuración de la clínica\n\nEsta acción NO se puede deshacer.\nSe recomienda hacer un backup antes.'))return;
   if(!confirm('Segunda confirmación requerida.\n\n¿Confirmas que deseas borrar todos los datos y volver a los valores de fábrica?'))return;
   // Clear all localStorage keys used by the app
-  ['oa3_pts','oa3_eg','oa3_fact','oa3_nid','oa3_neg','oa3_nfact','oa3_nreceta','oa3_logo','oa3_meds','oa3_qa'].forEach(k=>localStorage.removeItem(k));
+  ['oa3_pts','oa3_eg','oa3_fact','oa3_nid','oa3_neg','oa3_nfact','oa3_nreceta','oa3_logo','oa3_meds','oa3_qa','oa3_arch','oa3_svc'].forEach(k=>localStorage.removeItem(k));
+  servicios=[];
   // Reset state
   patients=[];egresos=[];facturas=[];quickAppts=[];
   nextId=1;nextEgId=1;nextFactId=1;nextRecetaId=1;
@@ -2485,6 +2499,40 @@ function factoryReset(){
   renderSidebar();
   showPage('dashboard');
   alert('✓ App restablecida correctamente a los valores de fábrica.');
+}
+
+function agregarServicio(){
+  const nombre=document.getElementById('f_svcnombre')?.value?.trim();
+  const precio=parseFloat(document.getElementById('f_svcprecio')?.value)||0;
+  const categoria=document.getElementById('f_svccategoria')?.value||'General';
+  if(!nombre){alert('Escribe el nombre del servicio');return;}
+  servicios.push({id:Date.now(),nombre,precio,categoria});
+  save();
+  // Refresh list in modal
+  const list=document.getElementById('svc-list');
+  if(list) list.innerHTML=servicios.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:var(--card);border-radius:7px;margin-bottom:4px;border:1px solid var(--border)">
+      <div style="flex:1"><div style="font-size:13px;color:var(--text);font-weight:500">${s.nombre}</div><div style="font-size:10px;color:var(--text3)">${s.categoria}</div></div>
+      <div style="font-size:13px;font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</div>
+      <button onclick="eliminarServicio(${i})" style="padding:3px 8px;font-size:11px;background:#fee2e2;color:var(--red);border:none;border-radius:5px;cursor:pointer;font-weight:600">✕</button>
+    </div>`).join('');
+  document.getElementById('f_svcnombre').value='';
+  document.getElementById('f_svcprecio').value='';
+  document.getElementById('f_svcnombre').focus();
+}
+
+function eliminarServicio(idx){
+  if(!confirm(`¿Eliminar "${servicios[idx]?.nombre}" del catálogo?`))return;
+  servicios.splice(idx,1);
+  save();
+  const list=document.getElementById('svc-list');
+  if(list) list.innerHTML=servicios.length===0?`<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center">Sin servicios</div>`
+    :servicios.map((s,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:var(--card);border-radius:7px;margin-bottom:4px;border:1px solid var(--border)">
+        <div style="flex:1"><div style="font-size:13px;color:var(--text);font-weight:500">${s.nombre}</div><div style="font-size:10px;color:var(--text3)">${s.categoria}</div></div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</div>
+        <button onclick="eliminarServicio(${i})" style="padding:3px 8px;font-size:11px;background:#fee2e2;color:var(--red);border:none;border-radius:5px;cursor:pointer;font-weight:600">✕</button>
+      </div>`).join('');
 }
 
 function agregarMed(){
@@ -3084,7 +3132,7 @@ function importarDatos(){
         // Fix missing arrays
         patients.forEach(pt=>{
           ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
-          ['treatments','payments','appointments','diary','images','consents','recetas'].forEach(k=>{if(!pt[k])pt[k]=[];});
+          ['treatments','payments','appointments','diary','images','consents','recetas','presupuestos'].forEach(k=>{if(!pt[k])pt[k]=[];});
         });
         // Restore logo if present
         if(data.clinica){
@@ -3303,7 +3351,7 @@ async function sbLoadNow(){
     if(d.meds?.length){ MEDICAMENTOS_COMUNES=d.meds; saveMeds(); }
     patients.forEach(pt=>{
       ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
-      ['treatments','payments','appointments','diary','images','consents','recetas'].forEach(k=>{if(!pt[k])pt[k]=[];});
+      ['treatments','payments','appointments','diary','images','consents','recetas','presupuestos'].forEach(k=>{if(!pt[k])pt[k]=[];});
     });
     if(d.clinica){
       document.getElementById('logoText').textContent=d.clinica.nombre||'OdontoApp';
@@ -3340,7 +3388,266 @@ function sbAutoSync(){
   sbSaveTimer=setTimeout(()=>sbSaveNow(false).catch(()=>{}), 5000);
 }
 
-// ═══ INIT ═══
+// ═══ PRESUPUESTOS ═══
+function renderPresupuestos(){
+  const p=curPt;
+  if(!p.presupuestos)p.presupuestos=[];
+  const totalPresup=p.presupuestos.filter(x=>x.estado!=='rechazado').reduce((s,x)=>s+x.total,0);
+  const totalPagado=p.payments.reduce((s,py)=>s+py.amount,0);
+  return`
+  ${p.presupuestos.length?`
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="kpi"><div class="kpi-label">Total presupuestado</div><div class="kpi-val" style="color:var(--accent)">$${totalPresup.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Total pagado</div><div class="kpi-val" style="color:var(--green)">$${totalPagado.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Saldo pendiente</div><div class="kpi-val" style="color:${totalPresup-totalPagado>0?'var(--red)':'var(--green)'}">$${Math.max(0,totalPresup-totalPagado).toFixed(2)}</div></div>
+  </div>`:''}
+  <div class="card">
+    <div class="action-row">
+      <div class="card-title" style="margin:0">Presupuestos</div>
+      <button class="btn-primary" onclick="openNuevoPresupuesto()">+ Nuevo presupuesto</button>
+    </div>
+    ${p.presupuestos.length===0?`
+      <div style="text-align:center;padding:32px 20px;color:var(--text3)">
+        <div style="font-size:36px;margin-bottom:10px">💰</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:4px">Sin presupuestos</div>
+        <div style="font-size:12px">Crea un presupuesto formal para presentar al paciente antes del tratamiento</div>
+      </div>`
+    :p.presupuestos.slice().reverse().map(pr=>{
+      const pct=pr.total>0?Math.min(100,Math.round((totalPagado/pr.total)*100)):0;
+      const statusColor={borrador:'#64748b',aprobado:'#10b981',rechazado:'#ef4444'}[pr.estado]||'#64748b';
+      const statusBg={borrador:'#f1f5f9',aprobado:'#d1fae5',rechazado:'#fee2e2'}[pr.estado]||'#f1f5f9';
+      const statusLabel={borrador:'Borrador',aprobado:'✓ Aprobado',rechazado:'✕ Rechazado'}[pr.estado]||'Borrador';
+      return`
+      <div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:13px;font-weight:700;color:var(--text)">Presupuesto N° ${String(pr.id).padStart(4,'0')}</div>
+              <span style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:${statusBg};color:${statusColor}">${statusLabel}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtDate(pr.fecha)} · ${pr.items.length} ítem${pr.items.length!==1?'s':''} · Total: <strong>$${pr.total.toFixed(2)}</strong></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm" style="font-size:11px;padding:4px 10px" onclick="verPresupuesto(${pr.id})">👁 Ver</button>
+            ${pr.estado==='borrador'?`
+              <button class="btn-sm" style="font-size:11px;padding:4px 10px;background:#d1fae5;color:#065f46;border-color:#6ee7b7" onclick="aprobarPresupuesto(${pr.id})">✓ Aprobar</button>
+              <button class="btn-sm" style="font-size:11px;padding:4px 10px;background:#fee2e2;color:#991b1b;border-color:#fca5a5" onclick="rechazarPresupuesto(${pr.id})">✕ Rechazar</button>`:''}
+            <button class="del-btn" onclick="eliminarPresupuesto(${pr.id})">✕</button>
+          </div>
+        </div>
+        ${pr.estado==='aprobado'?`
+        <div style="margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px">
+            <span>Progreso de pago</span>
+            <span><strong>$${totalPagado.toFixed(2)}</strong> de $${pr.total.toFixed(2)} (${pct}%)</span>
+          </div>
+          <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'};border-radius:4px;transition:width .3s"></div>
+          </div>
+        </div>`:''}
+        <div style="font-size:11px;color:var(--text3)">${pr.items.slice(0,3).map(it=>`${it.nombre} (${it.qty})`).join(' · ')}${pr.items.length>3?` · +${pr.items.length-3} más`:''}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+let presupItemCount=0;
+function openNuevoPresupuesto(){
+  presupItemCount=0;
+  openModal(`<div class="modal-title">💰 Nuevo presupuesto</div>
+  <div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_pfd" type="date" value="${today()}"></div><div class="form-group"><label>Validez</label><select id="f_pfval"><option value="15">15 días</option><option value="30" selected>30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Observaciones / Plan de tratamiento</label><input id="f_pfobs" placeholder="Descripción del plan, condiciones, acuerdos..."></div></div>
+  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Ítems del presupuesto</div>
+      <button onclick="addPresupItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar ítem</button>
+    </div>
+    <div id="presup-items"></div>
+    ${servicios.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">⚡ Del catálogo:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${servicios.map(s=>`<button onclick="addPresupItemFromSvc('${s.nombre.replace(/'/g,"\\'")}',${s.precio})" style="padding:4px 10px;border:1px solid var(--border);border-radius:16px;background:var(--card);font-size:11px;cursor:pointer;color:var(--text)">${s.nombre} <span style="color:var(--green);font-weight:600">$${s.precio.toFixed(2)}</span></button>`).join('')}
+      </div></div>`:''}
+  </div>
+  <div class="form-row"><div class="form-group"><label>Descuento ($)</label><input id="f_pfdesc" type="number" min="0" step="0.01" value="0" oninput="recalcPresup()"></div><div class="form-group"><label>Total</label><div id="f_pftotal" style="font-size:22px;font-weight:700;color:var(--accent);padding:8px 0">$0.00</div></div></div>
+  <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="savePresupuesto()">Crear presupuesto</button></div>`);
+  document.querySelector('.modal').style.width='640px';
+  addPresupItem();
+}
+
+function addPresupItem(nombre='',precio=0,qty=1){
+  presupItemCount++;
+  const id=presupItemCount;
+  const div=document.createElement('div');
+  div.id=`pi-${id}`;
+  div.style.cssText='display:grid;grid-template-columns:2fr 1fr 70px auto;gap:8px;align-items:end;margin-bottom:8px';
+  div.innerHTML=`
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Servicio / Descripción *</label><input id="pin_${id}" value="${nombre}" placeholder="Obturación, extracción..." oninput="recalcPresup()"></div>
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Precio unitario</label><input id="pip_${id}" type="number" min="0" step="0.01" value="${precio}" oninput="recalcPresup()"></div>
+    <div class="form-group" style="margin:0"><label style="font-size:10px">Cant.</label><input id="piq_${id}" type="number" min="1" value="${qty}" oninput="recalcPresup()"></div>
+    <button onclick="document.getElementById('pi-${id}').remove();recalcPresup()" style="height:36px;padding:0 10px;border:1px solid #fca5a5;border-radius:8px;background:#fee2e2;color:#991b1b;cursor:pointer;margin-bottom:1px">✕</button>`;
+  document.getElementById('presup-items').appendChild(div);
+  recalcPresup();
+}
+
+function addPresupItemFromSvc(nombre,precio){ addPresupItem(nombre,precio,1); }
+
+function recalcPresup(){
+  let sub=0;
+  document.querySelectorAll('[id^="pi-"]').forEach(row=>{
+    const id=row.id.replace('pi-','');
+    const p=parseFloat(document.getElementById(`pip_${id}`)?.value)||0;
+    const q=parseInt(document.getElementById(`piq_${id}`)?.value)||1;
+    sub+=p*q;
+  });
+  const desc=parseFloat(document.getElementById('f_pfdesc')?.value)||0;
+  const el=document.getElementById('f_pftotal');
+  if(el)el.textContent=`$${Math.max(0,sub-desc).toFixed(2)}`;
+}
+
+function savePresupuesto(){
+  const items=[];
+  document.querySelectorAll('[id^="pi-"]').forEach(row=>{
+    const id=row.id.replace('pi-','');
+    const nombre=document.getElementById(`pin_${id}`)?.value?.trim();
+    if(!nombre)return;
+    const precio=parseFloat(document.getElementById(`pip_${id}`)?.value)||0;
+    const qty=parseInt(document.getElementById(`piq_${id}`)?.value)||1;
+    items.push({nombre,precio,qty,subtotal:precio*qty});
+  });
+  if(!items.length){alert('Agrega al menos un ítem al presupuesto');return;}
+  const desc=parseFloat(v('f_pfdesc'))||0;
+  const sub=items.reduce((s,i)=>s+i.subtotal,0);
+  if(!curPt.presupuestos)curPt.presupuestos=[];
+  curPt.presupuestos.push({id:nextPresupId++,fecha:v('f_pfd'),validez:parseInt(v('f_pfval'))||30,observaciones:v('f_pfobs'),items,descuento:desc,subtotal:sub,total:Math.max(0,sub-desc),estado:'borrador',fechaAprobacion:null,firmaPaciente:''});
+  save();closeModal();presupItemCount=0;renderTab();
+}
+
+function verPresupuesto(id){
+  const pr=curPt.presupuestos.find(x=>x.id===id);if(!pr)return;
+  const clinicaNombre=document.getElementById('logoText').textContent;
+  const profesional=document.getElementById('logoProfesional').textContent;
+  const totalPagado=curPt.payments.reduce((s,py)=>s+py.amount,0);
+  const pct=pr.total>0?Math.min(100,Math.round((totalPagado/pr.total)*100)):0;
+  const statusColor={borrador:'#64748b',aprobado:'#10b981',rechazado:'#ef4444'}[pr.estado];
+  const statusLabel={borrador:'BORRADOR',aprobado:'APROBADO ✓',rechazado:'RECHAZADO'}[pr.estado];
+  openModal(`<div class="modal-title">💰 Presupuesto N° ${String(pr.id).padStart(4,'0')}</div>
+  <div id="presup-print-area" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;color:#0f172a;font-size:12px;font-family:Arial,sans-serif">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #0f172a">
+      <div>
+        <div style="font-size:16px;font-weight:700">${clinicaNombre}</div>
+        <div style="font-size:11px;color:#64748b">${profesional} · RUC: ${clinicaRUC||'—'}</div>
+        <div style="font-size:11px;color:#64748b">${clinicaDireccion||''} ${clinicaTelefono?'· Tel: '+clinicaTelefono:''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:16px;font-weight:700">PRESUPUESTO DENTAL</div>
+        <div style="font-size:13px;font-weight:700;color:${statusColor};margin-top:2px">${statusLabel}</div>
+        <div style="font-size:11px;color:#64748b">N° ${String(pr.id).padStart(4,'0')} · ${fmtDate(pr.fecha)}</div>
+        <div style="font-size:11px;color:#64748b">Válido por ${pr.validez} días</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+      <div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">Paciente</div><div style="font-size:13px;font-weight:600">${curPt.name}</div></div>
+      <div><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">Cédula</div><div style="font-size:13px;font-weight:600">${curPt.cedula||'—'}</div></div>
+      ${pr.observaciones?`<div style="grid-column:1/-1"><div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:2px">Plan de tratamiento</div><div style="font-size:12px">${pr.observaciones}</div></div>`:''}
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px">
+      <thead><tr style="background:#f1f5f9">
+        <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase">Descripción</th>
+        <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase">Cant.</th>
+        <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase">P. Unitario</th>
+        <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase">Total</th>
+      </tr></thead>
+      <tbody>
+        ${pr.items.map(it=>`<tr style="border-bottom:1px solid #e2e8f0">
+          <td style="padding:9px 10px">${it.nombre}</td>
+          <td style="padding:9px 10px;text-align:center">${it.qty}</td>
+          <td style="padding:9px 10px;text-align:right">$${it.precio.toFixed(2)}</td>
+          <td style="padding:9px 10px;text-align:right;font-weight:600">$${it.subtotal.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="text-align:right;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px;display:inline-block;min-width:220px;float:right">
+      <div style="font-size:12px;color:#64748b;margin-bottom:3px">Subtotal: $${pr.subtotal.toFixed(2)}</div>
+      ${pr.descuento?`<div style="font-size:12px;color:#10b981;margin-bottom:4px">Descuento: -$${pr.descuento.toFixed(2)}</div>`:''}
+      <div style="font-size:20px;font-weight:700;color:#0f172a;border-top:1px solid #e2e8f0;padding-top:6px">TOTAL: $${pr.total.toFixed(2)}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">IVA 0% — Servicio de salud (Art. 56 LRTI Ecuador)</div>
+    </div>
+    <div style="clear:both"></div>
+    ${pr.estado==='aprobado'?`
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#15803d">
+      ✓ Aprobado el ${fmtDate(pr.fechaAprobacion)}${pr.firmaPaciente?' · Firmado por: '+pr.firmaPaciente:''}
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px">
+        <span>Progreso de pago</span><span>$${totalPagado.toFixed(2)} de $${pr.total.toFixed(2)} (${pct}%)</span>
+      </div>
+      <div style="height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${pct>=100?'#10b981':'#0ea5e9'};border-radius:5px"></div>
+      </div>
+    </div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0">
+      <div style="text-align:center"><div style="height:44px"></div><div style="border-top:1px solid #0f172a;padding-top:6px">
+        <div style="font-size:12px;font-weight:700">${curPt.name}</div>
+        <div style="font-size:10px;color:#64748b">Firma del paciente · C.I. ${curPt.cedula||'—'}</div>
+      </div></div>
+      <div style="text-align:center"><div style="height:44px"></div><div style="border-top:1px solid #0f172a;padding-top:6px">
+        <div style="font-size:12px;font-weight:700">${profesional}</div>
+        <div style="font-size:10px;color:#64748b">Firma del profesional</div>
+      </div></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cerrar</button>
+    ${pr.estado==='borrador'?`<button class="btn-primary" style="background:var(--green)" onclick="closeModal();aprobarPresupuesto(${pr.id})">✓ Aprobar</button>`:''}
+    <button class="btn-primary" onclick="imprimirPresupuesto()">🖨️ Imprimir</button>
+  </div>`);
+  document.querySelector('.modal').style.width='700px';
+}
+
+function imprimirPresupuesto(){
+  const area=document.getElementById('presup-print-area');if(!area)return;
+  const w=window.open('','_blank','width=820,height=900');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Presupuesto Dental</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:28px;color:#0f172a}@media print{body{padding:12px}}</style>
+  </head><body>${area.innerHTML}</body></html>`);
+  w.document.close();setTimeout(()=>w.print(),400);
+}
+
+function aprobarPresupuesto(id){
+  const pr=curPt.presupuestos.find(x=>x.id===id);if(!pr)return;
+  openModal(`<div class="modal-title">✓ Aprobar presupuesto</div>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Confirma que <strong>${curPt.name}</strong> aprobó el presupuesto N° ${String(pr.id).padStart(4,'0')} por <strong>$${pr.total.toFixed(2)}</strong>.</p>
+  <div class="form-row form-full"><div class="form-group"><label>Nombre del paciente / representante que firma</label><input id="f_pfirma" value="${curPt.name}"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Fecha de aprobación</label><input id="f_pfecha" type="date" value="${today()}"></div></div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn-primary" style="background:var(--green)" onclick="confirmarAprobacion(${id})">✓ Confirmar</button>
+  </div>`);
+}
+
+function confirmarAprobacion(id){
+  const pr=curPt.presupuestos.find(x=>x.id===id);if(!pr)return;
+  pr.estado='aprobado';pr.fechaAprobacion=v('f_pfecha');pr.firmaPaciente=v('f_pfirma');
+  if(confirm('¿Agregar los ítems del presupuesto como tratamientos pendientes automáticamente?')){
+    pr.items.forEach(it=>{
+      curPt.treatments.push({id:Date.now()+Math.random(),name:it.nombre,tooth:'Según presupuesto',date:today(),cost:it.subtotal,status:'pendiente'});
+    });
+  }
+  save();closeModal();renderTab();
+}
+
+function rechazarPresupuesto(id){
+  if(!confirm('¿Marcar este presupuesto como rechazado?'))return;
+  const pr=curPt.presupuestos.find(x=>x.id===id);
+  if(pr){pr.estado='rechazado';save();renderTab();}
+}
+
+function eliminarPresupuesto(id){
+  if(!confirm('¿Eliminar este presupuesto?'))return;
+  curPt.presupuestos=curPt.presupuestos.filter(x=>x.id!==id);
+  save();renderTab();
+}
 
 // ═══ INIT ═══
 load();
@@ -3348,6 +3655,8 @@ loadMeds();
 loadQuickAppts();
 sbLoadConfig();
 if(sbUrl&&sbKey){ sbInit(); updateSbBtn('✓ Supabase conectado','#3ecf8e'); }
+// Restore dark mode
+if(localStorage.getItem('oa3_dark')==='1'){document.body.classList.add('dark-mode');const btn=document.getElementById('darkToggle');if(btn)btn.textContent='☀️';}
 renderSidebar();
 showPage('dashboard');
 </script>
