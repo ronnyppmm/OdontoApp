@@ -2195,8 +2195,12 @@ function renderConfiguracion(){
         ${servicios.length===0?`<div style="font-size:12px;color:var(--text3);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Sin servicios configurados</div>`
         :servicios.map((s,i)=>`
           <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
-            <div style="flex:1"><div style="font-size:13px;color:var(--text);font-weight:500">${s.nombre}</div><div style="font-size:10px;color:var(--text3)">${s.categoria}</div></div>
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--text);font-weight:500">${s.nombre}</div>
+              <div style="font-size:10px;color:var(--text3)">${s.categoria}</div>
+            </div>
             <div style="font-size:14px;font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</div>
+            <button onclick="editarServicioCfg(${i})" style="padding:4px 10px;font-size:11px;background:#dbeafe;color:#1e40af;border:none;border-radius:6px;cursor:pointer;font-weight:600">✏️ Editar</button>
             <button onclick="eliminarServicioCfg(${i})" style="padding:4px 10px;font-size:11px;background:#fee2e2;color:var(--red);border:none;border-radius:6px;cursor:pointer;font-weight:600">✕</button>
           </div>`).join('')}
       </div>
@@ -2271,6 +2275,29 @@ function agregarServicioCfg(){
 function eliminarServicioCfg(idx){
   if(!confirm(`¿Eliminar "${servicios[idx]?.nombre}"?`))return;
   servicios.splice(idx,1);save();showPage('configuracion');
+}
+
+function editarServicioCfg(idx){
+  const s=servicios[idx];if(!s)return;
+  openModal(`<div class="modal-title">✏️ Editar servicio</div>
+  <div class="form-row form-full"><div class="form-group"><label>Nombre del servicio *</label><input id="f_esvnombre" value="${s.nombre}"></div></div>
+  <div class="form-row"><div class="form-group"><label>Precio ($)</label><input id="f_esvprecio" type="number" min="0" step="0.01" value="${s.precio.toFixed(2)}"></div>
+  <div class="form-group"><label>Categoría</label><select id="f_esvcategoria">
+    ${['Prevención','Operatoria','Endodoncia','Cirugía','Ortodoncia','Prótesis','Periodoncia','Estética','Radiología','General'].map(c=>`<option${c===s.categoria?' selected':''}>${c}</option>`).join('')}
+  </select></div></div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn-primary" onclick="guardarEdicionServicio(${idx})">💾 Guardar cambios</button>
+  </div>`);
+}
+
+function guardarEdicionServicio(idx){
+  const nombre=v('f_esvnombre')?.trim();
+  const precio=parseFloat(v('f_esvprecio'))||0;
+  const categoria=v('f_esvcategoria');
+  if(!nombre){alert('El nombre no puede estar vacío');return;}
+  servicios[idx]={...servicios[idx],nombre,precio,categoria};
+  save();closeModal();showPage('configuracion');
 }
 
 function agregarMedCfg(){
