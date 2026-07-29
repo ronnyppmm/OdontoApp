@@ -10,10 +10,12 @@
   --sb:#0f172a;--sb2:#1e293b;--sb3:#334155;--sbtext:#cbd5e1;--sbactive:#38bdf8;
   --accent:#0ea5e9;--accent2:#0284c7;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;
   --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--text2:#64748b;--text3:#94a3b8;
+  --cal-today:#eff6ff;--cal-today-header:#eff6ff;--cal-today-cell:#fafeff;--cal-weekend:#fafafa;--cal-hover:#f0f9ff;
 }
 body.dark-mode{
   --bg:#0f172a;--card:#1e293b;--border:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
   --sb:#020617;--sb2:#0f172a;--sb3:#1e293b;
+  --cal-today:#1e3a5f;--cal-today-header:#1e3a5f;--cal-today-cell:#162032;--cal-weekend:#162032;--cal-hover:#1e2d3d;
 }
 body.dark-mode .modal{background:#1e293b;border:1px solid #334155}
 body.dark-mode input,body.dark-mode textarea,body.dark-mode select{background:#0f172a!important;color:#f1f5f9!important;border-color:#334155!important}
@@ -405,8 +407,22 @@ let clinicaRUC='',clinicaDireccion='',clinicaTelefono='';
 function initials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase()}
 function ptColor(id){return COLORS[id%COLORS.length]}
 function v(id){return document.getElementById(id)?.value||''}
-function today(){return new Date().toISOString().split('T')[0]}
-function fmtDate(d){if(!d)return'—';const dt=new Date(d+'T12:00');return`${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`}
+// Timezone-aware date helpers
+function getTzOffset(){ return parseInt(localStorage.getItem('oa3_tz')||'-5'); }
+function localDate(d){
+  const offset=getTzOffset();
+  const utc=d.getTime()+(d.getTimezoneOffset()*60000);
+  return new Date(utc+(offset*3600000));
+}
+function today(){
+  const d=localDate(new Date());
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function daysFromNow(n){
+  const d=localDate(new Date());
+  d.setDate(d.getDate()+n);
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}function fmtDate(d){if(!d)return'—';const dt=new Date(d+'T12:00');return`${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`}
 function calcAge(birthdate){
   if(!birthdate)return'—';
   const hoy=new Date();
@@ -489,8 +505,7 @@ function seedDemo(){
   save();
 }
 
-function todayBD(){const d=new Date();return`1990-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-function daysFromNow(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().split('T')[0]}
+function todayBD(){const d=localDate(new Date());return`1990-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 
 // ═══ SIDEBAR ═══
 function renderSidebar(){
@@ -761,7 +776,7 @@ function renderMonthView(allAppts, todayStr){
     const dayAppts=allAppts.filter(a=>a.date===dateStr).sort((a,b)=>a.time.localeCompare(b.time));
     const dow=(startDow+day-1)%7;
     const isWeekend=dow===5||dow===6;
-    html+=`<div onclick="openQuickAppt('${dateStr}')" style="background:${isToday?'#eff6ff':isWeekend?'#fafafa':'var(--card)'};min-height:90px;padding:6px;cursor:pointer;transition:background .1s;overflow:hidden;min-width:0" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${isToday?'#eff6ff':isWeekend?'#fafafa':'var(--card)'}'">
+    html+=`<div onclick="openQuickAppt('${dateStr}')" style="background:${isToday?'var(--cal-today, #eff6ff)':isWeekend?'var(--cal-weekend, #fafafa)':'var(--card)'};min-height:90px;padding:6px;cursor:pointer;transition:background .1s;overflow:hidden;min-width:0" onmouseover="this.style.background='var(--cal-hover, #f0f9ff)'" onmouseout="this.style.background='${isToday?'var(--cal-today, #eff6ff)':isWeekend?'var(--cal-weekend, #fafafa)':'var(--card)'}'">
       <div style="font-size:13px;font-weight:${isToday?'700':'500'};color:${isToday?'#fff':'var(--text)'};width:22px;height:22px;border-radius:50%;background:${isToday?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;margin-bottom:3px">${day}</div>
       ${dayAppts.slice(0,3).map(a=>{
         const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
@@ -793,7 +808,7 @@ function renderWeekView(allAppts, todayStr){
   days.forEach((d,i)=>{
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const isT=ds===todayStr;
-    html+=`<div style="background:${isT?'#eff6ff':'var(--bg)'};padding:8px 4px;text-align:center">
+    html+=`<div style="background:${isT?'var(--cal-today-header, #eff6ff)':'var(--bg)'};padding:8px 4px;text-align:center">
       <div style="font-size:10px;font-weight:600;color:var(--text2)">${DNAMES[i]}</div>
       <div style="font-size:15px;font-weight:700;color:${isT?'var(--accent)':'var(--text)'}">${d.getDate()}</div>
     </div>`;
@@ -805,7 +820,7 @@ function renderWeekView(allAppts, todayStr){
       const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const hrAppts=allAppts.filter(a=>a.date===ds&&a.time.startsWith(hr.split(':')[0]));
       const isT=ds===todayStr;
-      html+=`<div onclick="openQuickAppt('${ds}','${hr}')" style="background:${isT?'#fafeff':'var(--card)'};min-height:52px;padding:3px;border-top:1px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${isT?'#fafeff':'var(--card)'}'">
+      html+=`<div onclick="openQuickAppt('${ds}','${hr}')" style="background:${isT?'var(--cal-today-cell, #fafeff)':'var(--card)'};min-height:52px;padding:3px;border-top:1px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--cal-hover, #f0f9ff)'" onmouseout="this.style.background='${isT?'var(--cal-today-cell, #fafeff)':'var(--card)'}'">
         ${hrAppts.map(a=>{
           const bg=a.status==='completada'?'#d1fae5':a.type==='quick'?'#fef3c7':'#dbeafe';
           const tc=a.status==='completada'?'#065f46':a.type==='quick'?'#92400e':'#1e40af';
@@ -1045,7 +1060,7 @@ function loadQuickAppts(){ const d=localStorage.getItem('oa3_qa'); quickAppts=d?
 
 // ═══ ESTADÍSTICAS ═══
 function renderEstadisticas(){
-  const now=new Date();
+  const now=localDate(new Date());
   const curY=now.getFullYear();
   const months=[];
   for(let i=5;i>=0;i--){
@@ -1207,7 +1222,7 @@ function renderEstadisticas(){
 }
 
 function abrirResetMes(){
-  const now=new Date();
+  const now=localDate(new Date());
   const opts=[];
   for(let i=0;i<12;i++){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
@@ -1398,7 +1413,7 @@ function _generarInformeHTML(titulo,pagos,egresosD,totalInc,totalEg,utilidad,pac
 }
 
 function descargarInformeMensual(){
-  const now=new Date();
+  const now=localDate(new Date());
   const m=now.getMonth(),y=now.getFullYear();
   const mesNombre=`${MONTHS_FULL[m]} ${y}`;
   const pagos=[];
@@ -2162,6 +2177,40 @@ function renderConfiguracion(){
       <div class="form-row form-full"><div class="form-group"><label>Profesional a cargo</label><input id="cfg_lprof" value="${document.getElementById('logoProfesional').textContent}" placeholder="Dr. Nombre Apellido"></div></div>
       <div class="form-row"><div class="form-group"><label>RUC</label><input id="cfg_ruc" value="${clinicaRUC}" placeholder="1712345678001"></div><div class="form-group"><label>Teléfono</label><input id="cfg_tel" value="${clinicaTelefono}" placeholder="02-234-5678"></div></div>
       <div class="form-row form-full"><div class="form-group"><label>Dirección</label><input id="cfg_dir" value="${clinicaDireccion}" placeholder="Av. Principal 123, Quito"></div></div>
+      <div class="form-row form-full"><div class="form-group">
+        <label>🌐 Zona horaria</label>
+        <select id="cfg_tz">
+          ${[
+            ['-12','(UTC-12) Línea de fecha internacional'],
+            ['-11','(UTC-11) Samoa'],
+            ['-10','(UTC-10) Hawaii'],
+            ['-9','(UTC-9) Alaska'],
+            ['-8','(UTC-8) Los Ángeles, Vancouver'],
+            ['-7','(UTC-7) Ciudad de México, Denver'],
+            ['-6','(UTC-6) Guatemala, Costa Rica'],
+            ['-5','(UTC-5) Ecuador, Colombia, Perú, Bogotá, Lima ✓'],
+            ['-4','(UTC-4) Venezuela, Bolivia, Chile'],
+            ['-3','(UTC-3) Argentina, Brasil, Uruguay'],
+            ['-2','(UTC-2) Georgia del Sur'],
+            ['-1','(UTC-1) Azores'],
+            ['0','(UTC+0) Londres, Dublín'],
+            ['1','(UTC+1) Madrid, París, Berlín'],
+            ['2','(UTC+2) Atenas, Cairo'],
+            ['3','(UTC+3) Moscú, Nairobi'],
+            ['4','(UTC+4) Dubai'],
+            ['5','(UTC+5) Islamabad'],
+            ['5.5','(UTC+5:30) India'],
+            ['6','(UTC+6) Dhaka'],
+            ['7','(UTC+7) Bangkok, Jakarta'],
+            ['8','(UTC+8) China, Singapur'],
+            ['9','(UTC+9) Tokio, Corea'],
+            ['10','(UTC+10) Sídney'],
+            ['11','(UTC+11) Islas Salomón'],
+            ['12','(UTC+12) Nueva Zelanda']
+          ].map(([v,l])=>`<option value="${v}"${String(getTzOffset())===v?' selected':''}>${l}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Fecha/hora local actual: <strong id="cfg_localtime"></strong></div>
+      </div></div>
       <div style="display:flex;justify-content:flex-end;margin-top:4px"><button class="btn-primary" onclick="guardarClinica(event)">💾 Guardar datos</button></div>
     </div>
 
@@ -2251,10 +2300,24 @@ function guardarClinica(e){
   clinicaRUC=document.getElementById('cfg_ruc')?.value||'';
   clinicaTelefono=document.getElementById('cfg_tel')?.value||'';
   clinicaDireccion=document.getElementById('cfg_dir')?.value||'';
+  const tz=document.getElementById('cfg_tz')?.value;
+  if(tz)localStorage.setItem('oa3_tz',tz);
   save();renderSidebar();
   const btn=e.target;btn.textContent='✓ Guardado';btn.style.background='var(--green)';
   setTimeout(()=>{btn.textContent='💾 Guardar datos';btn.style.background='';},2000);
 }
+
+// Live clock updater for config page
+function startCfgClock(){
+  const el=document.getElementById('cfg_localtime');
+  if(!el)return;
+  const tz=parseFloat(document.getElementById('cfg_tz')?.value||getTzOffset());
+  const utc=new Date().getTime()+(new Date().getTimezoneOffset()*60000);
+  const local=new Date(utc+(tz*3600000));
+  el.textContent=local.toLocaleString('es-EC',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  setTimeout(startCfgClock,5000);
+}
+setTimeout(startCfgClock,100);
 
 function guardarWAMsg(e){
   const msg=document.getElementById('cfg_wamsg')?.value?.trim();
@@ -2712,7 +2775,7 @@ function addDiagItem(){
   const id=diagItemCount;
   const div=document.createElement('div');
   div.id=`diag-item-${id}`;
-  div.style.cssText='background:#fff;border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;position:relative';
+  div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;position:relative';
   div.innerHTML=`
     <div style="display:flex;gap:8px;align-items:flex-start">
       <div style="flex:0 0 110px">
@@ -2884,7 +2947,7 @@ function addMedItem(){
   const datalist=`<datalist id="med-dl-${id}">${MEDICAMENTOS_COMUNES.map(m=>`<option value="${m}">`).join('')}</datalist>`;
   const div=document.createElement('div');
   div.id=`med-item-${id}`;
-  div.style.cssText='background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;position:relative';
+  div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;position:relative';
   div.innerHTML=`${datalist}
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:6px">
       <div class="form-group"><label>Medicamento *</label><input list="med-dl-${id}" id="mn_${id}" placeholder="Nombre del fármaco..."></div>
