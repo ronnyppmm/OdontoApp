@@ -2534,7 +2534,14 @@ function saveLogo(){
 }
 
 function getDefaultWAMsg(){
-  return `Hola {nombre} 👋\n\nLe recordamos que tiene una cita dental programada:\n\n📅 Fecha: {fecha}\n🕐 Hora: {hora}\n🦷 Motivo: {motivo}\n🏥 {clinica}\n\nPor favor confirme su asistencia o avísenos con anticipación si necesita reagendar.\n\n¡Le esperamos! 😊`;
+  // Use Unicode escapes to avoid encoding issues with emojis in localStorage
+  const wave='\uD83D\uDC4B';       // 👋
+  const cal='\uD83D\uDCC5';        // 📅
+  const clock='\uD83D\uDD50';      // 🕐
+  const tooth='\uD83E\uDDB7';      // 🦷
+  const hosp='\uD83C\uDFE5';       // 🏥
+  const smile='\uD83D\uDE0A';      // 😊
+  return `Hola {nombre} ${wave}\n\nLe recordamos que tiene una cita dental programada:\n\n${cal} Fecha: {fecha}\n${clock} Hora: {hora}\n${tooth} Motivo: {motivo}\n${hosp} {clinica}\n\nPor favor confirme su asistencia o avisenos con anticipacion si necesita reagendar.\n\n!Le esperamos! ${smile}`;
 }
 
 function buildWAMsg(appt, ptName){
@@ -2550,17 +2557,16 @@ function buildWAMsg(appt, ptName){
 
 function enviarWA(phone, appt, ptName){
   if(!phone||phone.trim()===''){
-    alert(`${ptName} no tiene número de teléfono registrado.\nAgrégalo en su ficha para poder enviar WhatsApp.`);
+    alert(ptName+' no tiene numero de telefono registrado.\nAgregalo en su ficha para poder enviar WhatsApp.');
     return;
   }
-  // Clean phone number — remove spaces, dashes, keep + and digits
   let num=phone.replace(/[\s\-\(\)]/g,'');
-  // Add Ecuador country code if not present
   if(num.startsWith('0'))num='593'+num.slice(1);
   else if(!num.startsWith('+')&&!num.startsWith('593'))num='593'+num;
   num=num.replace('+','');
-  const msg=encodeURIComponent(buildWAMsg(appt,ptName));
-  window.open(`https://wa.me/${num}?text=${msg}`,'_blank');
+  const msg=buildWAMsg(appt,ptName);
+  // Use wa.me with proper encoding
+  window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
 }
 
 function factoryReset(){
@@ -3745,8 +3751,11 @@ loadMeds();
 loadQuickAppts();
 sbLoadConfig();
 if(sbUrl&&sbKey){ sbInit(); updateSbBtn('✓ Supabase conectado','#3ecf8e'); }
+// Migrate: reset WA message if it contains corrupted emoji (? diamond)
+const oldWA=localStorage.getItem('oa3_wamsg');
+if(oldWA&&(oldWA.includes('\uFFFD')||oldWA.includes('?'+'?')))localStorage.removeItem('oa3_wamsg');
 // Restore dark mode
-if(localStorage.getItem('oa3_dark')==='1'){document.body.classList.add('dark-mode');const btn=document.getElementById('darkToggle');if(btn)btn.textContent='☀️';}
+if(localStorage.getItem('oa3_dark')==='1'){document.body.classList.add('dark-mode');const btn=document.getElementById('darkToggle');if(btn)btn.textContent='\u2600\uFE0F';}
 renderSidebar();
 showPage('dashboard');
 </script>
