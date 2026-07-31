@@ -1488,9 +1488,13 @@ function renderDiario(){
 }
 
 function openAddDiary(){
+  const now=localDate(new Date());
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  const profesional=document.getElementById('logoProfesional').textContent;
   openModal(`<div class="modal-title">Nueva nota clínica</div>
-  <div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_dd" type="date" value="${today()}"></div><div class="form-group"><label>Hora</label><input id="f_dt" type="time" value="09:00"></div></div>
-  <div class="form-row"><div class="form-group"><label>Título / Procedimiento *</label><input id="f_dtitle" placeholder="Consulta inicial, Extracción..."></div><div class="form-group"><label>Doctor</label><input id="f_ddoc" placeholder="Dr. Nombre"></div></div>
+  <div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_dd" type="date" value="${today()}"></div><div class="form-group"><label>Hora</label><input id="f_dt" type="time" value="${hh}:${mm}"></div></div>
+  <div class="form-row"><div class="form-group"><label>Título / Procedimiento *</label><input id="f_dtitle" placeholder="Consulta inicial, Extracción..."></div><div class="form-group"><label>Doctor</label><input id="f_ddoc" value="${profesional}" placeholder="Dr. Nombre"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Descripción clínica *</label><textarea id="f_dbody" placeholder="Describe el procedimiento, observaciones, materiales usados..."></textarea></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Alerta de seguimiento</label><input id="f_dalert" placeholder="Ej: Llamar para control en 7 días"></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveDiary()">Guardar nota</button></div>`);
@@ -1582,10 +1586,29 @@ function odoClickZone(e,tooth,zone){
     <div class="tp-section">Diente completo</div>
     ${ODO_WHOLE.map(c=>`<div class="tp-opt${curW===c.id?' active':''}" onclick="odoSetWhole('${c.id}')">${legSVG(c,false)} ${c.label}</div>`).join('')}`;
   const popup=document.getElementById('toothPopup');
+  popup.classList.add('show'); // show first so we can measure height
+  const popupH=popup.offsetHeight||340;
+  const popupW=popup.offsetWidth||215;
   const rect=e.target.closest('svg').getBoundingClientRect();
-  popup.style.left=Math.min(rect.right+8,window.innerWidth-225)+'px';
-  popup.style.top=Math.max(Math.min(rect.top-10,window.innerHeight-340),8)+'px';
-  popup.classList.add('show');
+  const spaceBelow=window.innerHeight-rect.bottom;
+  const spaceAbove=rect.top;
+  // Position horizontally — prefer right of tooth, fallback left
+  let left=rect.right+8;
+  if(left+popupW>window.innerWidth-8) left=rect.left-popupW-8;
+  if(left<8) left=8;
+  // Position vertically — appear above if not enough space below
+  let top;
+  if(spaceBelow>=popupH+16){
+    top=rect.top-10; // enough room below → align with tooth top
+  } else if(spaceAbove>=popupH+16){
+    top=rect.bottom-popupH+10; // not enough below → align bottom of popup with tooth bottom
+  } else {
+    // Neither side has enough room → center in viewport
+    top=Math.max(8,(window.innerHeight-popupH)/2);
+  }
+  top=Math.max(8,Math.min(top,window.innerHeight-popupH-8));
+  popup.style.left=left+'px';
+  popup.style.top=top+'px';
 }
 function odoSetSurf(id){delete curPt.wholeData[selOdoTooth];curPt.surfData[selOdoTooth+'_'+selOdoZone]===id?delete curPt.surfData[selOdoTooth+'_'+selOdoZone]:curPt.surfData[selOdoTooth+'_'+selOdoZone]=id;save();closeTP();renderTab();}
 function odoSetWhole(id){ODO_ZONES.forEach(z=>delete curPt.surfData[selOdoTooth+'_'+z]);curPt.wholeData[selOdoTooth]===id?delete curPt.wholeData[selOdoTooth]:curPt.wholeData[selOdoTooth]=id;save();closeTP();renderTab();}
