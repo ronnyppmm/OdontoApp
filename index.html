@@ -1176,27 +1176,6 @@ function renderEstadisticas(){
     </div>
   </div>`:''}
 
-  <div class="card">
-    <div class="card-title">Ingresos vs Egresos — últimos 6 meses (activos)</div>
-    <div style="display:flex;gap:12px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div style="width:12px;height:12px;background:var(--green);border-radius:2px"></div>Ingresos</div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div style="width:12px;height:12px;background:var(--red);border-radius:2px"></div>Egresos</div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div style="width:12px;height:12px;background:var(--accent);border-radius:2px"></div>Utilidad</div>
-    </div>
-    <div style="display:flex;gap:6px;align-items:flex-end;height:130px;padding-top:10px">
-      ${months.map(m=>`
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-          <div style="font-size:8px;color:var(--text3)">$${m.util>=0?'+':''}${m.util.toFixed(0)}</div>
-          <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:100px">
-            <div style="flex:1;background:var(--green);border-radius:3px 3px 0 0;height:${Math.round((m.inc/maxVal)*95)+3}px;opacity:.85"></div>
-            <div style="flex:1;background:var(--red);border-radius:3px 3px 0 0;height:${Math.round((m.eg/maxVal)*95)+3}px;opacity:.85"></div>
-            <div style="flex:1;background:var(--accent);border-radius:3px 3px 0 0;height:${Math.max(Math.round((Math.abs(m.util)/maxVal)*95),3)}px;opacity:${m.util>=0?.85:.4}"></div>
-          </div>
-          <div style="font-size:9px;color:var(--text3)">${m.label}</div>
-        </div>`).join('')}
-    </div>
-  </div>
-
   <div class="grid2">
     <div class="card">
       <div class="action-row"><div class="card-title" style="margin:0">Egresos registrados</div><button class="btn-primary" onclick="openAddEgreso()">+ Agregar egreso</button></div>
