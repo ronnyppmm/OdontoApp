@@ -2116,8 +2116,8 @@ function renderImagenes(){
     <div class="action-row">
       <div class="card-title" style="margin:0">Imágenes del paciente</div>
       <div style="display:flex;gap:8px">
-        <label style="padding:7px 16px;background:var(--accent);color:#fff;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer">
-          + Subir imagen
+        <label style="padding:7px 16px;background:var(--accent);color:#fff;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+          📷 Subir imágenes
           <input type="file" accept="image/*" multiple style="display:none" onchange="handleImgUpload(event)">
         </label>
       </div>
@@ -2134,7 +2134,7 @@ function renderImagenes(){
           <img src="${img.data}" alt="${img.name}" style="width:100%;height:150px;object-fit:cover;display:block;cursor:pointer" onclick="viewImg(${img.id})">
           <div style="padding:10px">
             <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">${img.name}</div>
-            <div style="font-size:10px;color:var(--text3)">${img.tipo||'Imagen'} · ${fmtDate(img.fecha)}</div>
+            <div style="font-size:10px;color:var(--text3)">${img.tipo||'Imagen'} · ${fmtDate(img.fecha)}${img.size?' · '+img.size:''}</div>
             ${img.notas?`<div style="font-size:11px;color:var(--text2);margin-top:4px">${img.notas}</div>`:''}
           </div>
           <button onclick="delImg(${img.id})" style="position:absolute;top:6px;right:6px;width:24px;height:24px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
@@ -2149,17 +2149,82 @@ function renderImagenes(){
 
 function handleImgUpload(e){
   const files=Array.from(e.target.files);
+  if(!files.length)return;
   if(!curPt.images)curPt.images=[];
-  let processed=0;
+
+  let pending=files.length;
+  let errors=0;
+
   files.forEach(file=>{
+    // Validate file type
+    if(!file.type.startsWith('image/')){
+      pending--;errors++;
+      if(pending===0){if(errors)alert('Algunos archivos no son imágenes válidas.');renderTab();}
+      return;
+    }
+
     const reader=new FileReader();
     reader.onload=function(ev){
-      curPt.images.push({id:Date.now()+processed,name:file.name.replace(/\.[^.]+$/,''),tipo:'Radiografía periapical',fecha:today(),data:ev.target.result,notas:''});
-      processed++;
-      if(processed===files.length){save();renderTab();}
+      // Compress image using canvas
+      const img=new Image();
+      img.onload=function(){
+        const canvas=document.createElement('canvas');
+        const MAX=1200; // max dimension in px
+        let w=img.width, h=img.height;
+        if(w>MAX||h>MAX){
+          if(w>h){h=Math.round(h*(MAX/w));w=MAX;}
+          else{w=Math.round(w*(MAX/h));h=MAX;}
+        }
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        // Quality 0.82 for JPEGs
+        const compressed=canvas.toDataURL('image/jpeg',0.82);
+        curPt.images.push({
+          id:Date.now()+Math.random(),
+          name:file.name.replace(/\.[^.]+$/,''),
+          tipo:'Radiografía periapical',
+          fecha:today(),
+          data:compressed,
+          notas:'',
+          size:Math.round(compressed.length*0.75/1024)+'KB'
+        });
+        pending--;
+        if(pending===0){
+          try{
+            save();
+          }catch(err){
+            // localStorage quota exceeded
+            alert('No se pudieron guardar todas las imágenes — espacio insuficiente.\nIntenta subir imágenes más pequeñas o elimina algunas existentes.');
+            // Remove last added images that failed
+          }
+          renderTab();
+        }
+      };
+      img.onerror=function(){
+        pending--;errors++;
+        if(pending===0){
+          if(errors)alert('No se pudo cargar '+errors+' imagen(es). Verifica que el archivo no esté dañado.');
+          renderTab();
+        }
+      };
+      img.src=ev.target.result;
+    };
+    reader.onerror=function(){
+      pending--;errors++;
+      if(pending===0){renderTab();}
     };
     reader.readAsDataURL(file);
   });
+
+  // Show loading indicator
+  const area=e.target.closest('.card');
+  if(area){
+    const loader=document.createElement('div');
+    loader.id='img-loader';
+    loader.style.cssText='text-align:center;padding:20px;font-size:13px;color:var(--text2)';
+    loader.innerHTML='⏳ Subiendo y comprimiendo imágenes...';
+    area.appendChild(loader);
+  }
 }
 
 function viewImg(id){
