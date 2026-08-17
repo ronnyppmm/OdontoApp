@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -345,6 +346,31 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 </div>
 
 <script>
+// ═══ FIX: IMPRESIÓN SEGURA (popups bloqueados) ═══
+function safeOpen(url,name,features){
+var w=null;
+try{ w=window.open(url,name,features); }catch(e){ w=null; }
+if(w) return w;
+alert('⚠️ El navegador bloqueó la ventana de impresión.\nEl documento se descargará como archivo HTML: ábrelo y presiona Ctrl+P para imprimirlo.');
+var buf='';
+return {
+document:{
+write:function(t){ buf+=t; },
+close:function(){
+var blob=new Blob([buf],{type:'text/html;charset=utf-8'});
+var a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='OdontoApp_documento.html';
+document.body.appendChild(a);
+a.click();
+a.remove();
+setTimeout(function(){URL.revokeObjectURL(a.href);},5000);
+}
+},
+print:function(){},
+close:function(){}
+};
+}
 // ═══ ODONTOGRAMA ═══
 const ODO_S=50,ODO_M=3,ODO_ZONES=['top','right','bottom','left','center'];
 const ZONE_NAMES={top:'Vestibular',right:'Distal',bottom:'Palatino/Lingual',left:'Mesial',center:'Oclusal'};
@@ -945,16 +971,24 @@ function calGoToday(){
 
 // Quick appointment (for patients who message to schedule)
 function openQuickAppt(dateStr, timeStr){
-  const ptOptions=`<option value="">— Sin ficha (cita rápida) —</option>`+patients.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   openModal(`<div class="modal-title">📅 Nueva cita</div>
   <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1e40af">
     <strong>💬 Cita rápida:</strong> Si el paciente te escribió por mensaje pero no tiene ficha, completa solo los datos básicos. Luego podrás crear su ficha completa.
   </div>
   <div class="form-row form-full">
-    <div class="form-group"><label>Paciente registrado (opcional)</label>
-      <select id="f_qa_pt" onchange="fillQuickApptFromPt()">
-        ${ptOptions}
-      </select>
+    <div class="form-group">
+      <label>Buscar paciente registrado (opcional)</label>
+      <div style="position:relative">
+        <input id="f_qa_search" placeholder="Escribe el nombre del paciente..." autocomplete="off"
+          oninput="filtrarPacientesAppt(this.value)"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px;outline:none;font-family:inherit;background:var(--card);color:var(--text)">
+        <div id="f_qa_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 10px 10px;z-index:600;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
+      </div>
+      <input type="hidden" id="f_qa_pt" value="">
+      <div id="f_qa_selected" style="display:none;margin-top:6px;padding:8px 12px;background:#d1fae5;border-radius:8px;font-size:12px;color:#065f46;display:flex;align-items:center;justify-content:space-between">
+        <span id="f_qa_selected_name"></span>
+        <button onclick="limpiarPacienteAppt()" style="background:none;border:none;color:#065f46;cursor:pointer;font-size:14px">✕</button>
+      </div>
     </div>
   </div>
   <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
@@ -965,6 +999,41 @@ function openQuickAppt(dateStr, timeStr){
   <div class="form-row form-full"><div class="form-group"><label>Motivo de la cita *</label><input id="f_qa_reason" placeholder="Consulta, limpieza, dolor, extracción..."></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Notas adicionales</label><input id="f_qa_notes" placeholder="Canal de agendamiento, observaciones..."></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveQuickAppt()">Guardar cita</button></div>`);
+}
+
+function filtrarPacientesAppt(q){
+  const dd=document.getElementById('f_qa_dropdown');
+  if(!q||q.trim().length<1){dd.style.display='none';return;}
+  const ql=q.toLowerCase();
+  const matches=patients.filter(p=>p.name.toLowerCase().includes(ql)||p.cedula?.includes(q)||p.phone?.includes(q)).slice(0,8);
+  if(!matches.length){dd.style.display='none';return;}
+  dd.innerHTML=matches.map(p=>`
+    <div onclick="seleccionarPacienteAppt(${p.id},'${p.name.replace(/'/g,"\\'")}','${p.phone||''}')"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--card)'">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${p.name.split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
+      <div><div style="font-weight:600">${p.name}</div><div style="font-size:10px;color:var(--text3)">${p.cedula||''} ${p.phone?'· '+p.phone:''}</div></div>
+    </div>`).join('');
+  dd.style.display='block';
+}
+
+function seleccionarPacienteAppt(id, nombre, telefono){
+  document.getElementById('f_qa_pt').value=id;
+  document.getElementById('f_qa_name').value=nombre;
+  document.getElementById('f_qa_phone').value=telefono||'';
+  document.getElementById('f_qa_search').value=nombre;
+  document.getElementById('f_qa_dropdown').style.display='none';
+  const sel=document.getElementById('f_qa_selected');
+  document.getElementById('f_qa_selected_name').textContent='✓ Paciente registrado: '+nombre;
+  sel.style.display='flex';
+}
+
+function limpiarPacienteAppt(){
+  document.getElementById('f_qa_pt').value='';
+  document.getElementById('f_qa_name').value='';
+  document.getElementById('f_qa_phone').value='';
+  document.getElementById('f_qa_search').value='';
+  document.getElementById('f_qa_selected').style.display='none';
 }
 
 function fillQuickApptFromPt(){
@@ -1726,7 +1795,7 @@ function imprimirOdoSnapshot(snapId){
   const clinicaNombre=document.getElementById('logoText').textContent;
   const area=document.getElementById('odo-snap-print');
   if(!area)return;
-  const w=window.open('','_blank','width=900,height=700');
+  const w=safeOpen('','_blank','width=900,height=700');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Odontograma — ${snap.label}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -1994,7 +2063,7 @@ function imprimirComprobante(pagoId){
 </div>
 </body></html>`;
 
-  const w=window.open('','_blank','width=900,height=780');
+  const w=safeOpen('','_blank','width=900,height=780');
   w.document.write(html);
   w.document.close();
 }
@@ -3175,213 +3244,349 @@ function renderRecetas(){
 
 function openNuevaReceta(){
   const profesional=document.getElementById('logoProfesional').textContent;
-  const p=curPt;
-  openModal(`<div class="modal-title">💊 Nueva Receta Médica</div>
-  <div class="form-row">
+  openModal(`<div class="modal-title">💊 Nueva Receta — Formato MSP Ecuador</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
     <div class="form-group"><label>Fecha</label><input id="f_rdate" type="date" value="${today()}"></div>
-    <div class="form-group"><label>Médico que prescribe</label><input id="f_rmed" value="${profesional}" placeholder="Dr. Nombre Apellido"></div>
+    <div class="form-group"><label>Tipo</label><select id="f_rtipo"><option value="agudo">AGUDA</option><option value="cronico">CRÓNICA</option></select></div>
+    <div class="form-group"><label>Médico prescriptor</label><input id="f_rmed" value="${profesional}"></div>
+    <div class="form-group"><label>Especialidad</label><input id="f_resp" value="Odontología General"></div>
+    <div class="form-group"><label>Reg. SENESCYT</label><input id="f_rreg" placeholder="N° registro"></div>
+    <div class="form-group"><label>N° Historia Clínica</label><input id="f_rhc" placeholder="H.C."></div>
   </div>
-  <div class="form-row">
-    <div class="form-group"><label>Especialidad</label><input id="f_resp" value="Odontología" placeholder="Odontología General"></div>
-    <div class="form-group"><label>Reg. SENESCYT / MSP</label><input id="f_rreg" placeholder="Número de registro"></div>
-  </div>
-  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Diagnósticos CIE-10</div>
-      <button onclick="addDiagItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar diagnóstico</button>
-    </div>
+  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Diagnósticos CIE-10</div>
     <div id="diag-items"></div>
-    <div style="font-size:10px;color:var(--text3);margin-top:6px">💡 Escribe el código (Ej: K021) o la descripción (Ej: caries) — aparecerán sugerencias para seleccionar</div>
+    <button onclick="addDiagItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar diagnóstico</button>
   </div>
-  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Rp/ Medicamentos</div>
+  <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Rp/ Medicamentos</div>
+      <button onclick="addMedItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar medicamento</button>
+    </div>
     <div id="med-items"></div>
-    <button onclick="addMedItem()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:6px 0;font-weight:600">+ Agregar medicamento</button>
   </div>
-  <div class="form-row form-full">
-    <div class="form-group"><label>Indicaciones generales</label><textarea id="f_rind" placeholder="Ej: Completar el tratamiento, evitar alcohol, tomar con alimentos..." style="min-height:60px"></textarea></div>
-  </div>
+  <div class="form-group" style="margin-bottom:10px"><label>Indicaciones para el paciente</label>
+    <textarea id="f_rind" style="min-height:60px" placeholder="Tomar con alimentos, completar el tratamiento, no mezclar con alcohol..."></textarea></div>
   <div class="modal-footer">
     <button class="btn-sec" onclick="closeModal()">Cancelar</button>
     <button class="btn-primary" onclick="saveReceta()">Emitir receta</button>
   </div>`);
-  document.querySelector('.modal').style.width='600px';
-  addDiagItem();
-  addMedItem();
+  document.querySelector('.modal').style.width='650px';
+  addDiagItem(); addMedItem();
+}
+
+function numToLetras(n){
+  const u=['','UN','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISÉIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE'];
+  const d=['','','VEINTI','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  n=parseInt(n)||0;
+  if(n<=20)return u[n];
+  if(n<30)return'VEINTI'+u[n-20];
+  if(n<100)return d[Math.floor(n/10)]+(n%10?' Y '+u[n%10]:'');
+  if(n===100)return'CIEN';
+  if(n<200)return('CIENTO '+numToLetras(n-100)).trim();
+  const c=['','','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+  if(n<1000)return(c[Math.floor(n/100)]+' '+numToLetras(n%100)).trim();
+  return String(n);
 }
 
 let medItemCount=0;
 function addMedItem(){
   medItemCount++;
   const id=medItemCount;
-  const datalist=`<datalist id="med-dl-${id}">${MEDICAMENTOS_COMUNES.map(m=>`<option value="${m}">`).join('')}</datalist>`;
+  const dl=`<datalist id="med-dl-${id}">${MEDICAMENTOS_COMUNES.map(m=>`<option value="${m}">`).join('')}</datalist>`;
   const div=document.createElement('div');
   div.id=`med-item-${id}`;
-  div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;position:relative';
-  div.innerHTML=`${datalist}
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:6px">
-      <div class="form-group"><label>Medicamento *</label><input list="med-dl-${id}" id="mn_${id}" placeholder="Nombre del fármaco..."></div>
-      <div class="form-group"><label>Dosis</label><input id="md_${id}" placeholder="500mg, 1 tableta..."></div>
+  div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px';
+  div.innerHTML=dl+`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--accent)">Medicamento ${id}</div>
+      ${id>1?`<button onclick="document.getElementById('med-item-${id}').remove()" style="padding:2px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fee2e2;color:#991b1b;cursor:pointer;font-size:11px">Eliminar</button>`:''}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
-      <div class="form-group"><label>Frecuencia</label><select id="mf_${id}"><option>Cada 8 horas</option><option>Cada 6 horas</option><option>Cada 12 horas</option><option>Cada 24 horas</option><option>Una vez al día</option><option>Dos veces al día</option><option>Tres veces al día</option><option>Según dolor</option><option>En caso necesario</option></select></div>
-      <div class="form-group"><label>Duración</label><input id="mdu_${id}" placeholder="5 días, 7 días..."></div>
-      <div class="form-group"><label>Vía</label><select id="mv_${id}"><option>Oral</option><option>Tópica</option><option>Sublingual</option><option>Inyectable</option></select></div>
-      <button onclick="document.getElementById('med-item-${id}').remove()" style="height:36px;padding:0 10px;border:1px solid #fca5a5;border-radius:8px;background:#fee2e2;color:#991b1b;cursor:pointer;margin-bottom:1px;font-size:13px">✕</button>
-    </div>`;
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="form-group" style="margin:0"><label>Nombre genérico DCI (sin abreviaturas) *</label>
+        <input list="med-dl-${id}" id="mn_${id}" placeholder="Ej: Amoxicilina trihidrato" style="font-weight:600"></div>
+      <div class="form-group" style="margin:0"><label>Forma farmacéutica</label>
+        <select id="mff_${id}"><option>Tableta</option><option>Cápsula</option><option>Jarabe</option><option>Suspensión oral</option><option>Solución inyectable</option><option>Gel tópico</option><option>Crema</option><option>Gotas</option><option>Enjuague bucal</option><option>Comprimido</option></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="form-group" style="margin:0"><label>Concentración</label><input id="mc_${id}" placeholder="500mg, 250mg/5ml"></div>
+      <div class="form-group" style="margin:0"><label>Vía de administración</label>
+        <select id="mv_${id}"><option>Oral</option><option>Tópica</option><option>Sublingual</option><option>Inyectable IM</option><option>Inyectable IV</option><option>Ótica</option><option>Rectal</option></select></div>
+      <div class="form-group" style="margin:0"><label>Cantidad (números)</label>
+        <input id="mqn_${id}" type="number" min="1" placeholder="10" oninput="document.getElementById('mql_${id}').value=numToLetras(this.value)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="form-group" style="margin:0"><label>Cantidad en letras (auto)</label>
+        <input id="mql_${id}" placeholder="Automático" style="text-transform:uppercase;font-size:11px"></div>
+      <div class="form-group" style="margin:0"><label>Dosis por toma</label><input id="md_${id}" placeholder="1 tableta, 5ml"></div>
+      <div class="form-group" style="margin:0"><label>Frecuencia</label>
+        <select id="mf_${id}"><option>Cada 8 horas</option><option>Cada 6 horas</option><option>Cada 12 horas</option><option>Cada 24 horas</option><option>2 veces al día</option><option>3 veces al día</option><option>Según dolor</option><option>En caso necesario</option></select></div>
+    </div>
+    <div class="form-group" style="margin:0"><label>Duración del tratamiento</label>
+      <input id="mdu_${id}" placeholder="5 días, 7 días, hasta terminar"></div>`;
   document.getElementById('med-items').appendChild(div);
 }
 
 function saveReceta(){
-  // Collect diagnoses
   const diagnosticos=[];
   document.querySelectorAll('[id^="diag-item-"]').forEach(row=>{
     const id=row.id.replace('diag-item-','');
     const cod=document.getElementById(`dcie_${id}`)?.value?.trim().toUpperCase();
     const desc=document.getElementById(`ddesc_${id}`)?.value?.trim();
-    if(cod||desc) diagnosticos.push({cod:cod||'',desc:desc||''});
+    if(cod||desc)diagnosticos.push({cod:cod||'',desc:desc||''});
   });
-  // Collect medications
   const meds=[];
   document.querySelectorAll('[id^="med-item-"]').forEach(row=>{
     const id=row.id.replace('med-item-','');
     const nombre=document.getElementById(`mn_${id}`)?.value?.trim();
     if(!nombre)return;
-    meds.push({nombre,dosis:document.getElementById(`md_${id}`)?.value||'',frecuencia:document.getElementById(`mf_${id}`)?.value||'',duracion:document.getElementById(`mdu_${id}`)?.value||'',via:document.getElementById(`mv_${id}`)?.value||'Oral'});
+    meds.push({nombre,formaFarmaceutica:document.getElementById(`mff_${id}`)?.value||'',concentracion:document.getElementById(`mc_${id}`)?.value||'',via:document.getElementById(`mv_${id}`)?.value||'Oral',cantidadNum:document.getElementById(`mqn_${id}`)?.value||'',cantidadLetras:document.getElementById(`mql_${id}`)?.value||'',dosis:document.getElementById(`md_${id}`)?.value||'',frecuencia:document.getElementById(`mf_${id}`)?.value||'',duracion:document.getElementById(`mdu_${id}`)?.value||''});
   });
-  if(meds.length===0){alert('Agrega al menos un medicamento');return;}
+  if(!meds.length){alert('Agrega al menos un medicamento');return;}
   if(!curPt.recetas)curPt.recetas=[];
-  curPt.recetas.push({
-    id:nextRecetaId++,
-    fecha:v('f_rdate'),medico:v('f_rmed'),especialidad:v('f_resp'),registro:v('f_rreg'),
-    diagnosticos,
-    // Legacy single-diag compat
-    cie10cod:diagnosticos[0]?.cod||'',diagnostico:diagnosticos[0]?.desc||'',
-    indicaciones:v('f_rind'),medicamentos:meds,
-    paciente:curPt.name,cedula:curPt.cedula,edad:calcAge(curPt.birthdate)
-  });
+  curPt.recetas.push({id:nextRecetaId++,fecha:v('f_rdate'),tipo:v('f_rtipo')||'agudo',medico:v('f_rmed'),especialidad:v('f_resp'),registro:v('f_rreg'),hc:v('f_rhc'),diagnosticos,cie10cod:diagnosticos[0]?.cod||'',diagnostico:diagnosticos[0]?.desc||'',indicaciones:v('f_rind'),medicamentos:meds,paciente:curPt.name,cedula:curPt.cedula,edad:calcAge(curPt.birthdate)});
   save();closeModal();medItemCount=0;diagItemCount=0;renderTab();
 }
 
 function verReceta(id){
   const r=curPt.recetas.find(x=>x.id===id);if(!r)return;
-  const clinicaNombre=document.getElementById('logoText').textContent;
-  const logoHtml=logoImg
-    ?`<img src="${logoImg}" style="width:100%;height:100%;object-fit:contain">`
-    :`<div style="width:100%;height:100%;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 2C9.2 2 7 4.2 7 7c0 2 1 4 2.2 5.2L10.5 21c.2.8.8 1 1.5 1s1.3-.2 1.5-1l1.3-8.8C16 11 17 9 17 7c0-2.8-2.2-5-5-5z"/></svg></div>`;
-  openModal(`<div class="modal-title">Receta Médica — Vista de impresión</div>
-  <div class="receta-preview" id="receta-print-area">
-    <div class="receta-header">
-      <div class="receta-logo-box">${logoHtml}</div>
-      <div class="receta-clinica">
-        <div class="receta-clinica-name">${clinicaNombre}</div>
-        <div class="receta-clinica-sub">${clinicaDireccion||'Dirección del consultorio'}</div>
-        <div class="receta-clinica-sub">Tel: ${clinicaTelefono||'—'} · RUC: ${clinicaRUC||'—'}</div>
-        <div class="receta-clinica-sub">${r.especialidad}</div>
+  _currentReceta=r;
+  const diags=(r.diagnosticos&&r.diagnosticos.length?r.diagnosticos:[{cod:r.cie10cod||'',desc:r.diagnostico||''}]).filter(d=>d.cod||d.desc);
+  const tipoLabel=(r.tipo==='cronico')?'CRÓNICA':'AGUDA';
+  openModal(`<div class="modal-title">💊 Receta Médica</div>
+  <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${r.paciente}</div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDate(r.fecha)} · Dr. ${r.medico} · ${r.especialidad}</div>
       </div>
-      <div class="receta-num-box">
-        <div class="receta-num-label">Receta N°</div>
-        <div class="receta-num-val">${String(r.id).padStart(6,'0')}</div>
-        <div style="font-size:9px;color:#94a3b8;margin-top:3px">${fmtDate(r.fecha)}</div>
+      <span style="font-size:11px;font-weight:700;padding:3px 12px;border-radius:20px;background:${r.tipo==='cronico'?'#dbeafe':'#dcfce7'};color:${r.tipo==='cronico'?'#1e40af':'#166534'}">${tipoLabel}</span>
+    </div>
+    ${diags.length?`<div style="font-size:11px;color:var(--text2);margin-bottom:10px">📋 <strong>Diagnóstico:</strong> ${diags.map(d=>`${d.cod?d.cod+' — ':''}${d.desc}`).join(' | ')}</div>`:''}
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Rp/ Medicamentos</div>
+    ${r.medicamentos.map((m,i)=>`
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase">${i+1}. ${m.nombre} ${m.concentracion?m.concentracion:''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${m.formaFarmaceutica||m.forma||''} · Vía ${m.via||'Oral'}</div>
+        <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--text2)">
+          <span>💉 ${m.dosis||'—'}</span>
+          <span>⏰ ${m.frecuencia||'—'}</span>
+          <span>📅 ${m.duracion||'—'}</span>
+          ${m.cantidadNum?`<span>📦 ${m.cantidadNum} und. (${m.cantidadLetras||''})</span>`:''}
+        </div>
+      </div>`).join('')}
+    ${r.indicaciones?`<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;font-size:12px;color:#0369a1;margin-top:4px"><strong>Indicaciones:</strong> ${r.indicaciones}</div>`:''}
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn-primary" onclick="imprimirReceta()">🖨️ Imprimir receta A4</button>
+  </div>`);
+  document.querySelector('.modal').style.width='580px';
+}
+
+
+function imprimirReceta(){
+  const r=_currentReceta;
+  if(!r)return;
+  const clinica=document.getElementById('logoText').textContent;
+  const logoHtml=logoImg?`<img src="${logoImg}" style="width:100%;height:100%;object-fit:contain">`:`<div style="width:100%;height:100%;background:#1e3a5f;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px">🦷</div>`;
+  const now=localDate(new Date());
+  const dia=String(r.fecha.split('-')[2]).padStart(2,'0');
+  const mes=r.fecha.split('-')[1];
+  const anio=r.fecha.split('-')[0];
+  const edadAnios=r.edad||'—';
+  const tipoLabel=(r.tipo==='cronico')?'CRÓNICA':'AGUDA';
+  const diags=(r.diagnosticos&&r.diagnosticos.length?r.diagnosticos:[{cod:r.cie10cod||'',desc:r.diagnostico||''}]).filter(d=>d.cod||d.desc);
+
+  const medsHtml=r.medicamentos.map((m,i)=>`
+    <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e2e8f0">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:700;color:#1e3a5f;min-width:20px">${i+1}.</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:.02em">${m.nombre}</div>
+          <div style="font-size:11px;color:#475569;margin-top:2px">${m.formaFarmaceutica||m.forma||''} ${m.concentracion?'· '+m.concentracion:''}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;padding:8px 12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
+        <div><span style="color:#64748b;font-weight:600">Vía: </span>${m.via||'Oral'}</div>
+        <div><span style="color:#64748b;font-weight:600">Dosis: </span>${m.dosis||m.concentracion||'—'}</div>
+        <div><span style="color:#64748b;font-weight:600">Frecuencia: </span>${m.frecuencia||'—'}</div>
+        <div><span style="color:#64748b;font-weight:600">Duración: </span>${m.duracion||'—'}</div>
+        <div style="grid-column:1/-1"><span style="color:#64748b;font-weight:600">Cantidad: </span>${m.cantidadNum||'—'} ${m.cantidadLetras?`(${m.cantidadLetras} unidades)`:''}</div>
+      </div>
+    </div>`).join('');
+
+  // Patient simplified instructions (detachable)
+  const instrHtml=r.medicamentos.map((m,i)=>{
+    const freq=m.frecuencia||'';
+    let horario='';
+    if(freq.includes('8'))horario='Mañana · Tarde · Noche';
+    else if(freq.includes('6'))horario='Cada 6 horas del día';
+    else if(freq.includes('12'))horario='Mañana · Noche';
+    else if(freq.includes('24')||freq.includes('1 vez'))horario='Una vez al día';
+    else if(freq.includes('2 veces'))horario='Mañana · Noche';
+    else if(freq.includes('3 veces'))horario='Mañana · Tarde · Noche';
+    else horario=freq;
+    return`<tr>
+      <td style="padding:8px;border:1px solid #e2e8f0;font-weight:600">${m.nombre} ${m.concentracion?m.concentracion:''}</td>
+      <td style="padding:8px;border:1px solid #e2e8f0;text-align:center">${m.dosis||'—'}</td>
+      <td style="padding:8px;border:1px solid #e2e8f0;text-align:center">${horario}</td>
+      <td style="padding:8px;border:1px solid #e2e8f0;text-align:center">${m.duracion||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Receta Médica — ${clinica}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;background:#fff;font-size:11px}
+    .page{width:210mm;margin:0 auto;padding:14mm 14mm 10mm}
+    /* HEADER */
+    .header{display:flex;align-items:center;gap:14px;padding-bottom:10px;border-bottom:3px solid #1e3a5f;margin-bottom:12px}
+    .logo-box{width:52px;height:52px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0}
+    .clinic-name{font-size:16px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:.04em}
+    .clinic-sub{font-size:10px;color:#64748b;margin-top:2px;line-height:1.6}
+    .header-right{margin-left:auto;text-align:right}
+    .header-title{font-size:13px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.06em}
+    .tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;margin-top:4px;letter-spacing:.04em;background:${r.tipo==='cronico'?'#dbeafe':'#dcfce7'};color:${r.tipo==='cronico'?'#1e40af':'#166534'}}
+    /* GRID PACIENTE */
+    .pt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid #1e3a5f;border-radius:6px;overflow:hidden;margin-bottom:10px}
+    .pt-cell{padding:5px 10px;border-bottom:1px solid #cbd5e1;border-right:1px solid #cbd5e1;font-size:11px}
+    .pt-cell:nth-child(even){border-right:none}
+    .pt-cell:last-child,.pt-cell:nth-last-child(2){border-bottom:none}
+    .pt-label{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:1px}
+    .pt-val{font-weight:600;color:#0f172a}
+    /* SECCION HEADER */
+    .sec-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:#1e3a5f;padding:4px 10px;margin-bottom:0}
+    .sec-body{border:1px solid #1e3a5f;border-top:none;padding:10px;margin-bottom:10px;border-radius:0 0 6px 6px}
+    /* MEDICAMENTOS */
+    .rp-title{font-size:18px;font-weight:800;color:#1e3a5f;font-style:italic;margin-bottom:8px}
+    /* PRESCRIPTOR + PAUTA */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid #1e3a5f;border-radius:6px;overflow:hidden;margin-bottom:10px;min-height:90px}
+    .prescriptor{padding:10px;border-right:1px solid #1e3a5f}
+    .pauta{padding:10px}
+    .pauta-row{display:flex;gap:6px;align-items:baseline;margin-bottom:4px;font-size:11px;border-bottom:1px dotted #e2e8f0;padding-bottom:3px}
+    .pauta-lbl{font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;width:72px;flex-shrink:0}
+    /* INDICACIONES */
+    .ind-box{border:1px solid #1e3a5f;border-radius:6px;padding:10px;margin-bottom:12px}
+    /* CORTE */
+    .cut-line{border:none;border-top:2px dashed #94a3b8;margin:16px 0;position:relative}
+    .cut-label{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#fff;padding:0 10px;font-size:10px;color:#94a3b8;white-space:nowrap}
+    /* INSTRUCCIONES PACIENTE */
+    .patient-box{border:1.5px solid #0ea5e9;border-radius:8px;padding:12px}
+    .patient-title{font-size:13px;font-weight:800;color:#0ea5e9;margin-bottom:8px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#0ea5e9;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase}
+    .footer-note{font-size:9px;color:#94a3b8;text-align:center;margin-top:10px}
+    @media print{
+      body{margin:0}
+      .page{padding:8mm 10mm}
+      .cut-line{margin:12px 0}
+    }
+  </style></head><body>
+  <div class="page">
+
+    <!-- CABECERA -->
+    <div class="header">
+      <div class="logo-box">${logoHtml}</div>
+      <div>
+        <div class="clinic-name">${clinica}</div>
+        <div class="clinic-sub">
+          ${clinicaDireccion||''} ${clinicaTelefono?'· Tel: '+clinicaTelefono:''}<br>
+          ${clinicaRUC?'RUC: '+clinicaRUC:''}
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-title">Receta Médica<br>Ministerio de Salud Pública</div>
+        <div><span class="tipo-badge">PRESCRIPCIÓN ${tipoLabel}</span></div>
+        <div style="font-size:10px;color:#64748b;margin-top:4px">Fecha: ${dia}/${mes}/${anio}</div>
       </div>
     </div>
 
-    <div class="receta-info-grid">
-      <div>
-        <div class="receta-field-label">Paciente</div>
-        <div class="receta-field-val">${r.paciente}</div>
+    <!-- DATOS DEL PACIENTE -->
+    <div class="sec-title">Datos del Paciente</div>
+    <div class="pt-grid" style="border-top:none;border-radius:0 0 6px 6px;margin-bottom:10px">
+      <div class="pt-cell" style="grid-column:1/-1"><span class="pt-label">Nombres y Apellidos</span><span class="pt-val" style="font-size:13px">${r.paciente}</span></div>
+      <div class="pt-cell"><span class="pt-label">Documento de Identidad</span><span class="pt-val">${r.cedula||'—'}</span></div>
+      <div class="pt-cell"><span class="pt-label">Historia Clínica</span><span class="pt-val">${r.hc||'—'}</span></div>
+      <div class="pt-cell"><span class="pt-label">Edad</span><span class="pt-val">${edadAnios} años</span></div>
+      <div class="pt-cell"><span class="pt-label">Diagnóstico CIE-10</span><span class="pt-val">${diags.map(d=>`${d.cod?d.cod+' - ':''} ${d.desc}`).join(' | ')||'—'}</span></div>
+    </div>
+
+    <!-- MEDICAMENTOS -->
+    <div class="sec-title">Datos del Medicamento — Prescripción ${tipoLabel}</div>
+    <div class="sec-body">
+      <div style="font-size:9px;color:#64748b;margin-bottom:10px;font-style:italic">Nombre genérico o DCI, concentración, forma farmacéutica, cantidad en números y letras. <strong>Prohibido el uso de abreviaturas.</strong></div>
+      <div class="rp-title">Rp/</div>
+      ${medsHtml}
+    </div>
+
+    <!-- PRESCRIPTOR + PAUTA -->
+    <div class="two-col">
+      <div class="prescriptor">
+        <div class="sec-title" style="margin:-10px -10px 8px;border-radius:0">Datos del Prescriptor</div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:4px">${r.medico}</div>
+        <div style="font-size:10px;color:#475569">${r.especialidad}</div>
+        ${r.registro?`<div style="font-size:10px;color:#475569">Reg. SENESCYT: ${r.registro}</div>`:''}
+        <div style="height:40px"></div>
+        <div style="border-top:1px solid #0f172a;padding-top:4px;font-size:9px;color:#64748b">Firma y sello del prescriptor</div>
       </div>
-      <div>
-        <div class="receta-field-label">Cédula</div>
-        <div class="receta-field-val">${r.cedula||'—'}</div>
-      </div>
-      <div>
-        <div class="receta-field-label">Edad</div>
-        <div class="receta-field-val">${r.edad} años</div>
-      </div>
-      <div style="grid-column:1/-1">
-        <div class="receta-field-label">Diagnóstico(s) CIE-10</div>
-        ${(r.diagnosticos&&r.diagnosticos.length?r.diagnosticos:[{cod:r.cie10cod||'',desc:r.diagnostico||'—'}]).map((d,i)=>`
-          <div class="receta-field-val" style="display:flex;align-items:center;gap:8px;margin-bottom:${i<(r.diagnosticos||[{cod:'',desc:''}]).length-1?'6px':'0'}">
-            ${d.cod?`<span style="font-family:monospace;font-weight:800;color:#1e3a5f;font-size:12px;background:#e8f0fe;padding:2px 8px;border-radius:5px;flex-shrink:0">${d.cod}</span>`:''}
-            <span>${d.desc||d||'—'}</span>
+      <div class="pauta">
+        <div class="sec-title" style="margin:-10px -10px 8px;border-radius:0">Pauta de Administración</div>
+        ${r.medicamentos.map((m,i)=>`
+          <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f1f5f9">
+            <div style="font-size:10px;font-weight:700;color:#1e3a5f;margin-bottom:4px">${i+1}. ${m.nombre}</div>
+            <div class="pauta-row"><span class="pauta-lbl">Dosis:</span>${m.dosis||'—'}</div>
+            <div class="pauta-row"><span class="pauta-lbl">Frecuencia:</span>${m.frecuencia||'—'}</div>
+            <div class="pauta-row" style="border:none;margin:0"><span class="pauta-lbl">Duración:</span>${m.duracion||'—'}</div>
           </div>`).join('')}
       </div>
     </div>
 
-    <div style="border:1.5px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:12px">
-      <div class="receta-rp">Rp/</div>
-      ${r.medicamentos.map((m,i)=>`
-        <div class="receta-med-row">
-          <div class="receta-med-num">${i+1}</div>
-          <div>
-            <div class="receta-med-name">${m.nombre}${m.dosis?' — '+m.dosis:''}</div>
-            <div class="receta-med-detail">Vía ${m.via} · ${m.frecuencia} · ${m.duracion}</div>
-          </div>
-        </div>`).join('')}
-    </div>
-
-    ${r.indicaciones?`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:12px">
-      <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Indicaciones generales</div>
-      <div style="font-size:11px;color:#0f172a">${r.indicaciones}</div>
+    ${r.indicaciones?`
+    <div class="ind-box">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.06em;margin-bottom:4px">Indicaciones generales</div>
+      <div style="font-size:11px;color:#0f172a;line-height:1.7">${r.indicaciones}</div>
     </div>`:''}
 
-    <div style="margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:center">
-      <div class="receta-sign-box" style="min-width:220px">
-        <div style="height:44px"></div>
-        <div class="receta-sign-line"></div>
-        <div style="font-size:12px;font-weight:700;color:#0f172a">${r.medico}</div>
-        <div class="receta-sign-label">${r.especialidad}</div>
-        ${r.registro?`<div class="receta-sign-label">Reg. SENESCYT: ${r.registro}</div>`:''}
-      </div>
+    <div style="font-size:9px;color:#94a3b8;text-align:center;margin-bottom:12px">
+      Receta válida por 30 días · Servicio odontológico IVA 0% (Art. 56 LRTI Ecuador) · ${clinica}
     </div>
 
-    <div class="receta-msp-note">
-      Receta emitida conforme al formato del Ministerio de Salud Pública del Ecuador · 
-      Válida por 30 días desde la fecha de emisión · Solo medicamentos prescritos por profesional habilitado
+    <!-- LÍNEA DE CORTE -->
+    <div class="cut-line"><span class="cut-label">✂ Recortar y entregar al paciente</span></div>
+
+    <!-- INSTRUCCIONES PARA EL PACIENTE -->
+    <div class="patient-box">
+      <div class="patient-title">📋 Mis medicamentos — ${r.paciente}</div>
+      <div style="font-size:10px;color:#0369a1;margin-bottom:8px">Fecha: ${dia}/${mes}/${anio} · Dr. ${r.medico} · ${r.especialidad}</div>
+      <table>
+        <thead><tr>
+          <th>Medicamento</th>
+          <th style="text-align:center">Cantidad por toma</th>
+          <th style="text-align:center">Horario</th>
+          <th style="text-align:center">Por cuánto tiempo</th>
+        </tr></thead>
+        <tbody>${instrHtml}</tbody>
+      </table>
+      ${r.indicaciones?`
+      <div style="margin-top:10px;padding:8px;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd">
+        <div style="font-size:9px;font-weight:700;color:#0369a1;margin-bottom:4px">⚠️ IMPORTANTE — Lea con atención:</div>
+        <div style="font-size:11px;color:#0f172a;line-height:1.8">${r.indicaciones}</div>
+      </div>`:''}
+      <div style="font-size:9px;color:#64748b;margin-top:8px;text-align:center">Conserve este comprobante · Para dudas llame a: ${clinicaTelefono||clinica}</div>
     </div>
-    <div style="text-align:center;margin-top:6px">
-      <div class="receta-stamp">🇪🇨 MSP Ecuador — Receta Médica Oficial</div>
-    </div>
+
   </div>
-  <div class="modal-footer">
-    <button class="btn-sec" onclick="closeModal()">Cerrar</button>
-    <button class="btn-primary" onclick="imprimirReceta()">🖨️ Imprimir receta</button>
-  </div>`);
-  document.querySelector('.modal').style.width='620px';
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`;
+
+  const w=safeOpen('','_blank','width=900,height=950');
+  w.document.write(html);
+  w.document.close();
 }
 
-function imprimirReceta(){
-  const area=document.getElementById('receta-print-area');
-  if(!area)return;
-  const w=window.open('','_blank','width=700,height=900');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receta Médica</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Times New Roman',serif;padding:20px;color:#0f172a}
-  .receta-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;padding-bottom:10px;border-bottom:3px solid #1e3a5f}
-  .receta-logo-box{width:70px;height:70px;flex-shrink:0;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  .receta-logo-box img{width:100%;height:100%;object-fit:contain}
-  .receta-clinica-name{font-size:14px;font-weight:700;color:#1e3a5f;text-transform:uppercase}
-  .receta-clinica-sub{font-size:10px;color:#64748b;margin-top:2px}
-  .receta-num-box{text-align:right;border:1px solid #1e3a5f;padding:6px 12px;border-radius:6px}
-  .receta-num-label{font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase}
-  .receta-num-val{font-size:16px;font-weight:700;color:#1e3a5f;font-family:'Courier New',monospace}
-  .receta-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
-  .receta-field-label{font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
-  .receta-field-val{font-size:11px;font-weight:600;border-bottom:1px solid #e2e8f0;padding-bottom:2px}
-  .receta-rp{font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:8px}
-  .receta-med-row{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed #e2e8f0;align-items:flex-start}
-  .receta-med-num{width:20px;height:20px;border-radius:50%;background:#1e3a5f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-  .receta-med-name{font-size:12px;font-weight:700}
-  .receta-med-detail{font-size:10px;color:#64748b;margin-top:2px}
-  .receta-footer{display:flex;justify-content:center;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0}
-  .receta-sign-box{text-align:center;min-width:220px}
-  .receta-sign-line{border-top:1px solid #0f172a;margin-bottom:5px}
-  .receta-sign-label{font-size:9px;color:#64748b}
-  @media print{body{padding:10px}}</style></head><body>
-  ${area.innerHTML}</body></html>`);
-  w.document.close();
-  setTimeout(()=>{w.print();},400);
-}
+let _currentReceta=null;
 
 function delReceta(id){
   if(!confirm('¿Eliminar esta receta?'))return;
@@ -3967,7 +4172,7 @@ function verPresupuesto(id){
 
 function imprimirPresupuesto(){
   const area=document.getElementById('presup-print-area');if(!area)return;
-  const w=window.open('','_blank','width=820,height=900');
+  const w=safeOpen('','_blank','width=820,height=900');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Presupuesto Dental</title>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:28px;color:#0f172a}@media print{body{padding:12px}}</style>
   </head><body>${area.innerHTML}</body></html>`);
