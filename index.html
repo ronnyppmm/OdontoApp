@@ -2181,9 +2181,14 @@ function renderImagenes(){
   if(!p.images)p.images=[];
   const cats=['Radiografía periapical','Radiografía panorámica','Radiografía bitewing','Fotografía clínica','Fotografía extraoral','Fotografía intraoral','Otro'];
   return`
-  <div class="card">
-    <div class="action-row">
-      <div class="card-title" style="margin:0">Imágenes del paciente</div>
+<div class="card" style="position:relative" ondragover="imgDragOver(event)" ondragleave="imgDragLeave(event)" ondrop="imgDrop(event)">
+<div id="img-dropzone" style="display:none;position:absolute;inset:0;z-index:50;background:rgba(14,165,233,.12);border:3px dashed var(--accent);border-radius:14px;align-items:center;justify-content:center;flex-direction:column;gap:8px;pointer-events:none">
+<div style="font-size:34px">📥</div>
+<div style="font-size:14px;font-weight:700;color:var(--accent)">Suelta las imágenes aquí</div>
+<div style="font-size:11px;color:var(--text2)">Se guardan en su calidad original, sin límite de peso</div>
+</div>
+<div class="action-row">
+<div class="card-title" style="margin:0">Imágenes del paciente</div>
       <div style="display:flex;gap:8px">
         <label style="padding:7px 16px;background:var(--accent);color:#fff;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
           📷 Subir imágenes
@@ -2212,99 +2217,85 @@ function renderImagenes(){
   </div>
   <div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
     <div style="font-size:18px">💡</div>
-    <div style="font-size:12px;color:#1e40af">Puedes subir radiografías periapicales, panorámicas, fotografías clínicas intra y extraorales. Los archivos se guardan localmente en tu computadora.</div>
+    <div style="font-size:12px;color:#1e40af">Arrastra y suelta radiografías o fotografías directamente sobre esta tarjeta, o usa el botón 📷. Los archivos se guardan en su calidad original en tu computadora (IndexedDB), sin límite de peso.</div>
   </div>`;
 }
 
-function handleImgUpload(e){
-  const files=Array.from(e.target.files);
-  if(!files.length)return;
-  if(!curPt.images)curPt.images=[];
-
-  let pending=files.length;
-  let errors=0;
-
-  files.forEach(file=>{
-    // Validate file type
-    if(!file.type.startsWith('image/')){
-      pending--;errors++;
-      if(pending===0){if(errors)alert('Algunos archivos no son imágenes válidas.');renderTab();}
-      return;
-    }
-
-    const reader=new FileReader();
-    reader.onload=function(ev){
-      // Compress image using canvas
-      const img=new Image();
-      img.onload=function(){
-        const canvas=document.createElement('canvas');
-        const MAX=1200; // max dimension in px
-        let w=img.width, h=img.height;
-        if(w>MAX||h>MAX){
-          if(w>h){h=Math.round(h*(MAX/w));w=MAX;}
-          else{w=Math.round(w*(MAX/h));h=MAX;}
-        }
-        canvas.width=w; canvas.height=h;
-        canvas.getContext('2d').drawImage(img,0,0,w,h);
-        // Quality 0.82 for JPEGs
-        const compressed=canvas.toDataURL('image/jpeg',0.82);
-        curPt.images.push({
-          id:Date.now()+Math.random(),
-          name:file.name.replace(/\.[^.]+$/,''),
-          tipo:'Radiografía periapical',
-          fecha:today(),
-          data:compressed,
-          notas:'',
-          size:Math.round(compressed.length*0.75/1024)+'KB'
-        });
-        pending--;
-        if(pending===0){
-          try{
-            save();
-          }catch(err){
-            // localStorage quota exceeded
-            alert('No se pudieron guardar todas las imágenes — espacio insuficiente.\nIntenta subir imágenes más pequeñas o elimina algunas existentes.');
-            // Remove last added images that failed
-          }
-          renderTab();
-        }
-      };
-      img.onerror=function(){
-        pending--;errors++;
-        if(pending===0){
-          if(errors)alert('No se pudo cargar '+errors+' imagen(es). Verifica que el archivo no esté dañado.');
-          renderTab();
-        }
-      };
-      img.src=ev.target.result;
-    };
-    reader.onerror=function(){
-      pending--;errors++;
-      if(pending===0){renderTab();}
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // Show loading indicator
-  const area=e.target.closest('.card');
-  if(area){
-    const loader=document.createElement('div');
-    loader.id='img-loader';
-    loader.style.cssText='text-align:center;padding:20px;font-size:13px;color:var(--text2)';
-    loader.innerHTML='⏳ Subiendo y comprimiendo imágenes...';
-    area.appendChild(loader);
-  }
+// ═══ INDEXEDDB: almacenamiento para imágenes pesadas ═══
+let _imgDB=null;
+function openImgDB(){
+return new Promise((res,rej)=>{
+if(_imgDB)return res(_imgDB);
+const req=indexedDB.open('odontoapp_imgs',1);
+req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('images'))db.createObjectStore('images');};
+req.onsuccess=e=>{_imgDB=e.target.result;res(_imgDB);};
+req.onerror=e=>rej(e.target.error);
+});
 }
+function idbPut(id,blob){return openImgDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').put(blob,id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}));}
+function idbGet(id){return openImgDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('images','readonly');const rq=tx.objectStore('images').get(id);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);}));}
+function idbDel(id){return openImgDB().then(db=>new Promise((res)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').delete(id);tx.oncomplete=res;tx.onerror=()=>res();}));}
+function fmtBytes(b){if(b>1048576)return(b/1048576).toFixed(1)+'MB';return Math.round(b/1024)+'KB';}
+function processImageFiles(files){
+const list=Array.from(files||[]);
+if(!list.length)return;
+if(!curPt.images)curPt.images=[];
+let pending=list.length,errors=0;
+const done=()=>{pending--;if(pending===0){renderTab();}};
+list.forEach(file=>{
+if(!file.type.startsWith('image/')){errors++;done();if(pending===0)alert('Algunos archivos no son imágenes válidas.');return;}
+const reader=new FileReader();
+reader.onload=function(ev){
+const img=new Image();
+img.onload=function(){
+// Miniatura pequeña para la cuadrícula (carga rápida)
+const T=400;let w=img.width,h=img.height;
+if(w>T||h>T){if(w>h){h=Math.round(h*(T/w));w=T;}else{w=Math.round(w*(T/h));h=T;}}
+const c=document.createElement('canvas');c.width=w;c.height=h;
+c.getContext('2d').drawImage(img,0,0,w,h);
+const thumb=c.toDataURL('image/jpeg',0.8);
+const id=Date.now()+Math.random();
+const rec={id,name:file.name.replace(/\.[^.]+$/,''),tipo:'Radiografía periapical',fecha:today(),data:thumb,notas:'',size:fmtBytes(file.size),full:true};
+curPt.images.push(rec);
+// Original (pesado) → IndexedDB, sin límite de tamaño
+idbPut(id,file).then(()=>{try{save();}catch(e){}done();}).catch(()=>{
+rec.full=false; // sin IndexedDB: solo miniatura
+try{save();}catch(e){}
+done();
+});
+};
+img.onerror=function(){errors++;done();};
+img.src=ev.target.result;
+};
+reader.onerror=function(){errors++;done();};
+reader.readAsDataURL(file);
+});
+}
+function handleImgUpload(e){processImageFiles(e.target.files);e.target.value='';}
+// ── Arrastrar y soltar ──
+function imgDragOver(e){e.preventDefault();e.stopPropagation();const dz=document.getElementById('img-dropzone');if(dz)dz.style.display='flex';}
+function imgDragLeave(e){e.preventDefault();e.stopPropagation();const dz=document.getElementById('img-dropzone');if(dz)dz.style.display='none';}
+function imgDrop(e){e.preventDefault();e.stopPropagation();const dz=document.getElementById('img-dropzone');if(dz)dz.style.display='none';processImageFiles(e.dataTransfer.files);}
 
 function viewImg(id){
-  const img=curPt.images.find(x=>x.id===id);if(!img)return;
-  const cats=['Radiografía periapical','Radiografía panorámica','Radiografía bitewing','Fotografía clínica','Fotografía extraoral','Fotografía intraoral','Otro'];
-  openModal(`<div class="modal-title">Imagen — ${img.name}</div>
-  <img src="${img.data}" style="width:100%;max-height:360px;object-fit:contain;border-radius:10px;background:#0f172a;margin-bottom:14px">
-  <div class="form-row"><div class="form-group"><label>Nombre</label><input id="f_iname" value="${img.name}"></div><div class="form-group"><label>Tipo</label><select id="f_itipo">${cats.map(c=>`<option${c===img.tipo?' selected':''}>${c}</option>`).join('')}</select></div></div>
-  <div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_ifecha" type="date" value="${img.fecha}"></div><div class="form-group"><label>Notas</label><input id="f_inotas" value="${img.notas||''}"></div></div>
-  <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button><button class="btn-primary" onclick="saveImgEdit(${id})">Guardar cambios</button></div>`);
-  document.querySelector('.modal').style.width='640px';
+const img=curPt.images.find(x=>x.id===id);if(!img)return;
+const cats=['Radiografía periapical','Radiografía panorámica','Radiografía bitewing','Fotografía clínica','Fotografía extraoral','Fotografía intraoral','Otro'];
+openModal(`<div class="modal-title">Imagen — ${img.name}</div>
+<img id="fullimg-${id}" src="${img.data}" style="width:100%;max-height:360px;object-fit:contain;border-radius:10px;background:#0f172a;margin-bottom:14px">
+${img.full?`<div style="font-size:10px;color:var(--text3);margin:-8px 0 10px">🔍 Calidad original · ${img.size||''}</div>`:''}
+<div class="form-row"><div class="form-group"><label>Nombre</label><input id="f_iname" value="${img.name}"></div><div class="form-group"><label>Tipo</label><select id="f_itipo">${cats.map(c=>`<option${c===img.tipo?' selected':''}>${c}</option>`).join('')}</select></div></div>
+<div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_ifecha" type="date" value="${img.fecha}"></div><div class="form-group"><label>Notas</label><input id="f_inotas" value="${img.notas||''}"></div></div>
+<div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button><button class="btn-primary" onclick="saveImgEdit(${id})">Guardar cambios</button></div>`);
+document.querySelector('.modal').style.width='640px';
+if(img.full){
+idbGet(id).then(blob=>{
+if(blob){
+const url=URL.createObjectURL(blob);
+const el=document.getElementById('fullimg-'+id);
+if(el)el.src=url;
+}
+}).catch(()=>{});
+}
 }
 
 function saveImgEdit(id){
@@ -2314,9 +2305,10 @@ function saveImgEdit(id){
 }
 
 function delImg(id){
-  if(!confirm('¿Eliminar esta imagen?'))return;
-  curPt.images=curPt.images.filter(x=>x.id!==id);
-  save();renderTab();
+if(!confirm('¿Eliminar esta imagen?'))return;
+curPt.images=curPt.images.filter(x=>x.id!==id);
+idbDel(id).catch(()=>{});
+save();renderTab();
 }
 
 // ═══ CONSENTIMIENTOS INFORMADOS ═══
@@ -2510,6 +2502,7 @@ function renderConfiguracion(){
       <div class="form-row form-full"><div class="form-group"><label>Profesional a cargo</label><input id="cfg_lprof" value="${document.getElementById('logoProfesional').textContent}" placeholder="Dr. Nombre Apellido"></div></div>
       <div class="form-row"><div class="form-group"><label>RUC</label><input id="cfg_ruc" value="${clinicaRUC}" placeholder="1712345678001"></div><div class="form-group"><label>Teléfono</label><input id="cfg_tel" value="${clinicaTelefono}" placeholder="02-234-5678"></div></div>
       <div class="form-row form-full"><div class="form-group"><label>Dirección</label><input id="cfg_dir" value="${clinicaDireccion}" placeholder="Av. Principal 123, Quito"></div></div>
+<div class="form-row"><div class="form-group"><label>🔢 Próximo N° de receta</label><input id="cfg_recnum" type="number" min="1" value="${nextRecetaId}"><div style="font-size:10px;color:var(--text3);margin-top:3px">La próxima receta llevará este número y las siguientes continuarán la secuencia. Ej: si tu última receta física fue la 850, escribe 851.</div></div></div>
       <div class="form-row form-full"><div class="form-group">
         <label>🌐 Zona horaria</label>
         <select id="cfg_tz">
@@ -2634,7 +2627,8 @@ function guardarClinica(e){
   clinicaTelefono=document.getElementById('cfg_tel')?.value||'';
   clinicaDireccion=document.getElementById('cfg_dir')?.value||'';
   const tz=document.getElementById('cfg_tz')?.value;
-  if(tz)localStorage.setItem('oa3_tz',tz);
+if(tz)localStorage.setItem('oa3_tz',tz);
+const rn=parseInt(document.getElementById('cfg_recnum')?.value);if(rn>=1)nextRecetaId=rn;
   save();renderSidebar();
   const btn=e.target;btn.textContent='✓ Guardado';btn.style.background='var(--green)';
   setTimeout(()=>{btn.textContent='💾 Guardar datos';btn.style.background='';},2000);
@@ -3353,7 +3347,7 @@ function verReceta(id){
   _currentReceta=r;
   const diags=(r.diagnosticos&&r.diagnosticos.length?r.diagnosticos:[{cod:r.cie10cod||'',desc:r.diagnostico||''}]).filter(d=>d.cod||d.desc);
   const tipoLabel=(r.tipo==='cronico')?'CRÓNICA':'AGUDA';
-  openModal(`<div class="modal-title">💊 Receta Médica</div>
+  openModal(`<div class="modal-title">💊 Receta Médica — N° ${String(r.id).padStart(6,'0')}</div>
   <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div>
@@ -3386,204 +3380,163 @@ function verReceta(id){
 
 
 function imprimirReceta(){
-  const r=_currentReceta;
-  if(!r)return;
-  const clinica=document.getElementById('logoText').textContent;
-  const logoHtml=logoImg?`<img src="${logoImg}" style="width:100%;height:100%;object-fit:contain">`:`<div style="width:100%;height:100%;background:#1e3a5f;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px">🦷</div>`;
-  const now=localDate(new Date());
-  const dia=String(r.fecha.split('-')[2]).padStart(2,'0');
-  const mes=r.fecha.split('-')[1];
-  const anio=r.fecha.split('-')[0];
-  const edadAnios=r.edad||'—';
-  const tipoLabel=(r.tipo==='cronico')?'CRÓNICA':'AGUDA';
-  const diags=(r.diagnosticos&&r.diagnosticos.length?r.diagnosticos:[{cod:r.cie10cod||'',desc:r.diagnostico||''}]).filter(d=>d.cod||d.desc);
 
-  const medsHtml=r.medicamentos.map((m,i)=>`
-    <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e2e8f0">
-      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:700;color:#1e3a5f;min-width:20px">${i+1}.</span>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:.02em">${m.nombre}</div>
-          <div style="font-size:11px;color:#475569;margin-top:2px">${m.formaFarmaceutica||m.forma||''} ${m.concentracion?'· '+m.concentracion:''}</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;padding:8px 12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:11px">
-        <div><span style="color:#64748b;font-weight:600">Vía: </span>${m.via||'Oral'}</div>
-        <div><span style="color:#64748b;font-weight:600">Dosis: </span>${m.dosis||m.concentracion||'—'}</div>
-        <div><span style="color:#64748b;font-weight:600">Frecuencia: </span>${m.frecuencia||'—'}</div>
-        <div><span style="color:#64748b;font-weight:600">Duración: </span>${m.duracion||'—'}</div>
-        <div style="grid-column:1/-1"><span style="color:#64748b;font-weight:600">Cantidad: </span>${m.cantidadNum||'—'} ${m.cantidadLetras?`(${m.cantidadLetras} unidades)`:''}</div>
-      </div>
-    </div>`).join('');
+  function horarioPaciente(freq){
+if(!freq)return'—';
+if(freq.includes('6'))return'Cada 6 horas · Mañana · Mediodía · Tarde · Noche';
+if(freq.includes('8'))return'Cada 8 horas · Mañana · Tarde · Noche';
+if(freq.includes('12'))return'Cada 12 horas · Mañana · Noche';
+if(freq.includes('24')||/1 vez/i.test(freq))return'Cada 24 horas · Una vez al día';
+if(/2 veces/i.test(freq))return'2 veces al día · Mañana · Noche';
+if(/3 veces/i.test(freq))return'3 veces al día · Mañana · Tarde · Noche';
+return freq;
+}
 
-  // Patient simplified instructions (detachable)
-  const instrHtml=r.medicamentos.map((m,i)=>{
-    const freq=m.frecuencia||'';
-    let horario='';
-    if(freq.includes('8'))horario='Mañana · Tarde · Noche';
-    else if(freq.includes('6'))horario='Cada 6 horas del día';
-    else if(freq.includes('12'))horario='Mañana · Noche';
-    else if(freq.includes('24')||freq.includes('1 vez'))horario='Una vez al día';
-    else if(freq.includes('2 veces'))horario='Mañana · Noche';
-    else if(freq.includes('3 veces'))horario='Mañana · Tarde · Noche';
-    else horario=freq;
-    return`<tr>
-      <td style="padding:8px;border:1px solid #e2e8f0;font-weight:600">${m.nombre} ${m.concentracion?m.concentracion:''}</td>
-      <td style="padding:8px;border:1px solid #e2e8f0;text-align:center">${m.dosis||'—'}</td>
-      <td style="padding:8px;border:1px solid #e2e8f0;text-align:center">${horario}</td>
-      <td style="padding:8px;border:1px solid #e2e8f0;text-align:center">${m.duracion||'—'}</td>
-    </tr>`;
-  }).join('');
-
-  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <title>Receta Médica — ${clinica}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;background:#fff;font-size:11px}
-    .page{width:210mm;margin:0 auto;padding:14mm 14mm 10mm}
-    /* HEADER */
-    .header{display:flex;align-items:center;gap:14px;padding-bottom:10px;border-bottom:3px solid #1e3a5f;margin-bottom:12px}
-    .logo-box{width:52px;height:52px;flex-shrink:0;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0}
-    .clinic-name{font-size:16px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:.04em}
-    .clinic-sub{font-size:10px;color:#64748b;margin-top:2px;line-height:1.6}
-    .header-right{margin-left:auto;text-align:right}
-    .header-title{font-size:13px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.06em}
-    .tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;margin-top:4px;letter-spacing:.04em;background:${r.tipo==='cronico'?'#dbeafe':'#dcfce7'};color:${r.tipo==='cronico'?'#1e40af':'#166534'}}
-    /* GRID PACIENTE */
-    .pt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid #1e3a5f;border-radius:6px;overflow:hidden;margin-bottom:10px}
-    .pt-cell{padding:5px 10px;border-bottom:1px solid #cbd5e1;border-right:1px solid #cbd5e1;font-size:11px}
-    .pt-cell:nth-child(even){border-right:none}
-    .pt-cell:last-child,.pt-cell:nth-last-child(2){border-bottom:none}
-    .pt-label{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:1px}
-    .pt-val{font-weight:600;color:#0f172a}
-    /* SECCION HEADER */
-    .sec-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:#1e3a5f;padding:4px 10px;margin-bottom:0}
-    .sec-body{border:1px solid #1e3a5f;border-top:none;padding:10px;margin-bottom:10px;border-radius:0 0 6px 6px}
-    /* MEDICAMENTOS */
-    .rp-title{font-size:18px;font-weight:800;color:#1e3a5f;font-style:italic;margin-bottom:8px}
-    /* PRESCRIPTOR + PAUTA */
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid #1e3a5f;border-radius:6px;overflow:hidden;margin-bottom:10px;min-height:90px}
-    .prescriptor{padding:10px;border-right:1px solid #1e3a5f}
-    .pauta{padding:10px}
-    .pauta-row{display:flex;gap:6px;align-items:baseline;margin-bottom:4px;font-size:11px;border-bottom:1px dotted #e2e8f0;padding-bottom:3px}
-    .pauta-lbl{font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;width:72px;flex-shrink:0}
-    /* INDICACIONES */
-    .ind-box{border:1px solid #1e3a5f;border-radius:6px;padding:10px;margin-bottom:12px}
-    /* CORTE */
-    .cut-line{border:none;border-top:2px dashed #94a3b8;margin:16px 0;position:relative}
-    .cut-label{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#fff;padding:0 10px;font-size:10px;color:#94a3b8;white-space:nowrap}
-    /* INSTRUCCIONES PACIENTE */
-    .patient-box{border:1.5px solid #0ea5e9;border-radius:8px;padding:12px}
-    .patient-title{font-size:13px;font-weight:800;color:#0ea5e9;margin-bottom:8px}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th{background:#0ea5e9;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase}
-    .footer-note{font-size:9px;color:#94a3b8;text-align:center;margin-top:10px}
-    @media print{
-      body{margin:0}
-      .page{padding:8mm 10mm}
-      .cut-line{margin:12px 0}
-    }
-  </style></head><body>
-  <div class="page">
-
-    <!-- CABECERA -->
-    <div class="header">
-      <div class="logo-box">${logoHtml}</div>
-      <div>
-        <div class="clinic-name">${clinica}</div>
-        <div class="clinic-sub">
-          ${clinicaDireccion||''} ${clinicaTelefono?'· Tel: '+clinicaTelefono:''}<br>
-          ${clinicaRUC?'RUC: '+clinicaRUC:''}
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="header-title">Receta Médica<br>Ministerio de Salud Pública</div>
-        <div><span class="tipo-badge">PRESCRIPCIÓN ${tipoLabel}</span></div>
-        <div style="font-size:10px;color:#64748b;margin-top:4px">Fecha: ${dia}/${mes}/${anio}</div>
-      </div>
-    </div>
-
-    <!-- DATOS DEL PACIENTE -->
-    <div class="sec-title">Datos del Paciente</div>
-    <div class="pt-grid" style="border-top:none;border-radius:0 0 6px 6px;margin-bottom:10px">
-      <div class="pt-cell" style="grid-column:1/-1"><span class="pt-label">Nombres y Apellidos</span><span class="pt-val" style="font-size:13px">${r.paciente}</span></div>
-      <div class="pt-cell"><span class="pt-label">Documento de Identidad</span><span class="pt-val">${r.cedula||'—'}</span></div>
-      <div class="pt-cell"><span class="pt-label">Historia Clínica</span><span class="pt-val">${r.hc||'—'}</span></div>
-      <div class="pt-cell"><span class="pt-label">Edad</span><span class="pt-val">${edadAnios} años</span></div>
-      <div class="pt-cell"><span class="pt-label">Diagnóstico CIE-10</span><span class="pt-val">${diags.map(d=>`${d.cod?d.cod+' - ':''} ${d.desc}`).join(' | ')||'—'}</span></div>
-    </div>
-
-    <!-- MEDICAMENTOS -->
-    <div class="sec-title">Datos del Medicamento — Prescripción ${tipoLabel}</div>
-    <div class="sec-body">
-      <div style="font-size:9px;color:#64748b;margin-bottom:10px;font-style:italic">Nombre genérico o DCI, concentración, forma farmacéutica, cantidad en números y letras. <strong>Prohibido el uso de abreviaturas.</strong></div>
-      <div class="rp-title">Rp/</div>
-      ${medsHtml}
-    </div>
-
-    <!-- PRESCRIPTOR + PAUTA -->
-    <div class="two-col">
-      <div class="prescriptor">
-        <div class="sec-title" style="margin:-10px -10px 8px;border-radius:0">Datos del Prescriptor</div>
-        <div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:4px">${r.medico}</div>
-        <div style="font-size:10px;color:#475569">${r.especialidad}</div>
-        ${r.registro?`<div style="font-size:10px;color:#475569">Reg. SENESCYT: ${r.registro}</div>`:''}
-        <div style="height:40px"></div>
-        <div style="border-top:1px solid #0f172a;padding-top:4px;font-size:9px;color:#64748b">Firma y sello del prescriptor</div>
-      </div>
-      <div class="pauta">
-        <div class="sec-title" style="margin:-10px -10px 8px;border-radius:0">Pauta de Administración</div>
-        ${r.medicamentos.map((m,i)=>`
-          <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #f1f5f9">
-            <div style="font-size:10px;font-weight:700;color:#1e3a5f;margin-bottom:4px">${i+1}. ${m.nombre}</div>
-            <div class="pauta-row"><span class="pauta-lbl">Dosis:</span>${m.dosis||'—'}</div>
-            <div class="pauta-row"><span class="pauta-lbl">Frecuencia:</span>${m.frecuencia||'—'}</div>
-            <div class="pauta-row" style="border:none;margin:0"><span class="pauta-lbl">Duración:</span>${m.duracion||'—'}</div>
-          </div>`).join('')}
-      </div>
-    </div>
-
-    ${r.indicaciones?`
-    <div class="ind-box">
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.06em;margin-bottom:4px">Indicaciones generales</div>
-      <div style="font-size:11px;color:#0f172a;line-height:1.7">${r.indicaciones}</div>
-    </div>`:''}
-
-    <div style="font-size:9px;color:#94a3b8;text-align:center;margin-bottom:12px">
-      Receta válida por 30 días · Servicio odontológico IVA 0% (Art. 56 LRTI Ecuador) · ${clinica}
-    </div>
-
-    <!-- LÍNEA DE CORTE -->
-    <div class="cut-line"><span class="cut-label">✂ Recortar y entregar al paciente</span></div>
-
-    <!-- INSTRUCCIONES PARA EL PACIENTE -->
-    <div class="patient-box">
-      <div class="patient-title">📋 Mis medicamentos — ${r.paciente}</div>
-      <div style="font-size:10px;color:#0369a1;margin-bottom:8px">Fecha: ${dia}/${mes}/${anio} · Dr. ${r.medico} · ${r.especialidad}</div>
-      <table>
-        <thead><tr>
-          <th>Medicamento</th>
-          <th style="text-align:center">Cantidad por toma</th>
-          <th style="text-align:center">Horario</th>
-          <th style="text-align:center">Por cuánto tiempo</th>
-        </tr></thead>
-        <tbody>${instrHtml}</tbody>
-      </table>
-      ${r.indicaciones?`
-      <div style="margin-top:10px;padding:8px;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd">
-        <div style="font-size:9px;font-weight:700;color:#0369a1;margin-bottom:4px">⚠️ IMPORTANTE — Lea con atención:</div>
-        <div style="font-size:11px;color:#0f172a;line-height:1.8">${r.indicaciones}</div>
-      </div>`:''}
-      <div style="font-size:9px;color:#64748b;margin-top:8px;text-align:center">Conserve este comprobante · Para dudas llame a: ${clinicaTelefono||clinica}</div>
-    </div>
-
-  </div>
-  <script>window.onload=function(){window.print()}<\/script>
-  </body></html>`;
-
-  const w=safeOpen('','_blank','width=900,height=950');
-  w.document.write(html);
-  w.document.close();
+const r=_currentReceta;
+if(!r)return;
+const clinica=document.getElementById('logoText').textContent;
+const logoHtml=logoImg?`<img src="${logoImg}" style="width:100%;height:100%;object-fit:contain">`:`<div style="width:100%;height:100%;background:#1e3a5f;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px">🦷</div>`;
+const numStr=String(r.id).padStart(6,'0');
+const dia=String(r.fecha.split('-')[2]).padStart(2,'0');
+const mes=r.fecha.split('-')[1];
+const anio=r.fecha.split('-')[0];
+const edadAnios=r.edad||'—';
+const tipoLabel=(r.tipo==='cronico')?'CRÓNICA':'AGUDA';
+const diags=(r.diagnosticos&&r.diagnosticos.length?r.diagnosticos:[{cod:r.cie10cod||'',desc:r.diagnostico||''}]).filter(d=>d.cod||d.desc);
+const compact=r.medicamentos.length>3;
+const medsHtml=r.medicamentos.map((m,i)=>`
+<tr>
+<td style="text-align:center;font-weight:700;color:#1e3a5f">${i+1}</td>
+<td><strong style="text-transform:uppercase">${m.nombre}</strong>${m.concentracion?' · '+m.concentracion:''}<br><span style="color:#64748b">${m.formaFarmaceutica||m.forma||'Tableta'}</span></td>
+<td style="text-align:center">${m.via||'Oral'}</td>
+<td style="text-align:center">${m.dosis||m.concentracion||'—'}</td>
+<td style="text-align:center">${m.frecuencia||'—'}</td>
+<td style="text-align:center">${m.duracion||'—'}</td>
+<td style="text-align:center">${m.cantidadNum||'—'}${m.cantidadLetras?` (${m.cantidadLetras})`:''}</td>
+</tr>`).join('');
+const pautaHtml=r.medicamentos.map((m,i)=>`<div style="margin-bottom:3px;font-size:8.5px;line-height:1.35"><strong style="color:#1e3a5f">${i+1}. ${m.nombre}:</strong> ${m.dosis||'—'} · ${m.frecuencia||'—'} · ${m.duracion||'—'}</div>`).join('');
+const instrHtml=r.medicamentos.map((m,i)=>`
+<tr>
+<td style="padding:3px 6px;border:1px solid #cbd5e1;font-weight:600">${m.nombre} ${m.concentracion||''}</td>
+<td style="padding:3px 6px;border:1px solid #cbd5e1;text-align:center">${m.dosis||'—'}</td>
+<td style="padding:3px 6px;border:1px solid #cbd5e1;text-align:center">${horarioPaciente(m.frecuencia)}</td>
+<td style="padding:3px 6px;border:1px solid #cbd5e1;text-align:center">${m.duracion||'—'}</td>
+</tr>`).join('');
+const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Receta Médica — ${clinica}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@page{size:A4;margin:0}
+body{font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;background:#fff;font-size:10px}
+.page{width:210mm;margin:0 auto;padding:8mm 10mm 6mm}
+.header{display:flex;align-items:center;gap:10px;padding-bottom:6px;border-bottom:2px solid #1e3a5f;margin-bottom:7px}
+.logo-box{width:42px;height:42px;flex-shrink:0;border-radius:6px;overflow:hidden;border:1px solid #e2e8f0}
+.clinic-name{font-size:13px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:.04em}
+.clinic-sub{font-size:8.5px;color:#64748b;margin-top:1px;line-height:1.4}
+.header-right{margin-left:auto;text-align:right}
+.header-title{font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.05em}
+.tipo-badge{display:inline-block;font-size:8.5px;font-weight:700;padding:1px 8px;border-radius:20px;margin-top:2px;letter-spacing:.04em;background:${r.tipo==='cronico'?'#dbeafe':'#dcfce7'};color:${r.tipo==='cronico'?'#1e40af':'#166534'}}
+.fecha-txt{font-size:8.5px;color:#64748b;margin-top:2px}
+.sec-title{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:#1e3a5f;padding:3px 8px}
+.pt-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #1e3a5f;border-top:none;overflow:hidden;margin-bottom:7px}
+.pt-cell{padding:3px 8px;border-bottom:1px solid #cbd5e1;border-right:1px solid #cbd5e1;font-size:9.5px}
+.pt-cell:nth-child(even){border-right:none}
+.pt-cell:last-child,.pt-cell:nth-last-child(2){border-bottom:none}
+.pt-label{font-size:7.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:1px}
+.pt-val{font-weight:600;color:#0f172a}
+.rp-title{font-size:14px;font-weight:800;color:#1e3a5f;font-style:italic;margin:3px 0}
+.rp-note{font-size:8px;color:#64748b;font-style:italic;margin-top:3px}
+table.meds{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:7px}
+.meds th{background:#1e3a5f;color:#fff;padding:3px 5px;font-size:7.5px;text-transform:uppercase;letter-spacing:.03em;text-align:left}
+.meds td{padding:3px 5px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+.two-col{display:grid;grid-template-columns:1fr 1fr;border:1px solid #1e3a5f;border-radius:4px;overflow:hidden;margin-bottom:7px}
+.prescriptor{padding:7px 8px;border-right:1px solid #1e3a5f}
+.pauta{padding:7px 8px}
+.col-title{font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;background:#1e3a5f;padding:2px 6px;margin:-7px -8px 6px}
+.sign-space{height:24px}
+.sign-line{border-top:1px solid #0f172a;padding-top:3px;font-size:8px;color:#64748b}
+.ind-box{border:1px solid #1e3a5f;border-radius:4px;padding:5px 8px;margin-bottom:7px}
+.ind-title{font-size:7.5px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.06em;margin-bottom:2px}
+.ind-txt{font-size:9px;line-height:1.5}
+.footer-note{font-size:7.5px;color:#94a3b8;text-align:center;margin-bottom:6px}
+.cut-line{border:none;border-top:1.5px dashed #94a3b8;margin:6px 0;position:relative}
+.cut-label{position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:8px;color:#94a3b8;white-space:nowrap}
+.patient-box{border:1px solid #0ea5e9;border-radius:6px;padding:7px 8px}
+.patient-title{font-size:11px;font-weight:800;color:#0ea5e9;margin-bottom:2px}
+.patient-sub{font-size:8px;color:#0369a1;margin-bottom:5px}
+table.ptab{width:100%;border-collapse:collapse;font-size:8.5px}
+.ptab th{background:#0ea5e9;color:#fff;padding:3px 6px;font-size:7.5px;font-weight:700;text-transform:uppercase;text-align:left}
+.ptab td{padding:3px 6px;border:1px solid #cbd5e1;vertical-align:top}
+.patient-foot{font-size:7.5px;color:#64748b;margin-top:4px;text-align:center}
+.imp-box{margin-top:5px;padding:4px 6px;background:#f0f9ff;border-radius:4px;border:1px solid #bae6fd;font-size:8.5px;line-height:1.4}
+.page.compact .meds td{padding:2px 4px}
+.page.compact .ptab td{padding:2px 4px}
+.page.compact .sign-space{height:18px}
+@media print{body{margin:0}.page{padding:6mm 8mm 5mm}}
+</style></head><body>
+<div class="page${compact?' compact':''}">
+<div class="header">
+<div class="logo-box">${logoHtml}</div>
+<div>
+<div class="clinic-name">${clinica}</div>
+<div class="clinic-sub">${clinicaDireccion||''} ${clinicaTelefono?'· Tel: '+clinicaTelefono:''}${clinicaRUC?' · RUC: '+clinicaRUC:''}</div>
+</div>
+<div class="header-right">
+<div class="header-title">Receta Médica<br>Ministerio de Salud Pública</div>
+<div><span class="tipo-badge">PRESCRIPCIÓN ${tipoLabel}</span></div>
+<div class="fecha-txt">Fecha: ${dia}/${mes}/${anio}</div>
+<div style="font-size:12px;font-weight:800;color:#1e3a5f;font-family:'Courier New',monospace;margin-top:4px">N° ${String(r.id).padStart(6,'0')}</div>
+</div>
+</div>
+<div class="sec-title">Datos del Paciente</div>
+<div class="pt-grid">
+<div class="pt-cell" style="grid-column:1/-1"><span class="pt-label">Nombres y Apellidos</span><span class="pt-val" style="font-size:11px">${r.paciente}</span></div>
+<div class="pt-cell"><span class="pt-label">Documento de Identidad</span><span class="pt-val">${r.cedula||'—'}</span></div>
+<div class="pt-cell"><span class="pt-label">Historia Clínica</span><span class="pt-val">${r.hc||'—'}</span></div>
+<div class="pt-cell"><span class="pt-label">Edad</span><span class="pt-val">${edadAnios} años</span></div>
+<div class="pt-cell"><span class="pt-label">Diagnóstico CIE-10</span><span class="pt-val">${diags.map(d=>`${d.cod?d.cod+' - ':''}${d.desc}`).join(' | ')||'—'}</span></div>
+</div>
+<div class="sec-title">Datos del Medicamento — Prescripción ${tipoLabel}</div>
+<div class="rp-note">Nombre genérico o DCI, concentración, forma farmacéutica, cantidad en números y letras. Prohibido el uso de abreviaturas.</div>
+<div class="rp-title">Rp/</div>
+<table class="meds">
+<thead><tr><th style="width:14px">#</th><th>Medicamento</th><th>Vía</th><th>Dosis</th><th>Frecuencia</th><th>Duración</th><th>Cantidad</th></tr></thead>
+<tbody>${medsHtml}</tbody>
+</table>
+<div class="two-col">
+<div class="prescriptor">
+<div class="col-title">Datos del Prescriptor</div>
+<div style="font-size:10px;font-weight:700">${r.medico}</div>
+<div style="font-size:8.5px;color:#475569">${r.especialidad}</div>
+${r.registro?`<div style="font-size:8.5px;color:#475569">Reg. SENESCYT: ${r.registro}</div>`:''}
+<div class="sign-space"></div>
+<div class="sign-line">Firma y sello del prescriptor</div>
+</div>
+<div class="pauta">
+<div class="col-title">Pauta de Administración</div>
+${pautaHtml}
+</div>
+</div>
+${r.indicaciones?`<div class="ind-box"><div class="ind-title">Indicaciones generales</div><div class="ind-txt">${r.indicaciones}</div></div>`:''}
+<div class="footer-note">Receta válida por 30 días · Servicio odontológico IVA 0% (Art. 56 LRTI Ecuador) · ${clinica}</div>
+<div class="cut-line"><span class="cut-label">✂ Recortar y entregar al paciente</span></div>
+<div class="patient-box">
+<div class="patient-title">📋 Mis medicamentos — ${r.paciente}</div>
+<div class="patient-sub">Receta N° ${String(r.id).padStart(6,'0')} · Fecha: ${dia}/${mes}/${anio} · Dr. ${r.medico} · ${r.especialidad}</div>
+<table class="ptab">
+<thead><tr><th>Medicamento</th><th style="text-align:center">Cantidad por toma</th><th style="text-align:center">Horario</th><th style="text-align:center">Por cuánto tiempo</th></tr></thead>
+<tbody>${instrHtml}</tbody>
+</table>
+${r.indicaciones?`<div class="imp-box"><strong>⚠️ IMPORTANTE:</strong> ${r.indicaciones}</div>`:''}
+<div class="patient-foot">Conserve este comprobante · Para dudas llame a: ${clinicaTelefono||clinica}</div>
+</div>
+</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`;
+const w=safeOpen('','_blank','width=900,height=950');
+if(!w)return;
+w.document.write(html);
+w.document.close();
 }
 
 let _currentReceta=null;
