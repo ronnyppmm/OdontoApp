@@ -4278,34 +4278,38 @@ function runSearch(q){
 }
 
 function renderResults(results,q){
-  const box=document.getElementById('searchResults');
-  if(!results.length){
-    box.innerHTML=`<div class="sr-empty">Sin resultados para "<strong>${q}</strong>"</div>`;
-    box.classList.add('open');return;
-  }
-  // Group by type
-  const groups={patient:'👤 Pacientes',diary:'📝 Diario clínico',tx:'🦷 Tratamientos',appt:'📅 Citas',rx:'💊 Recetas'};
-  const grouped={};
-  results.slice(0,20).forEach(r=>{
-    if(!grouped[r.type])grouped[r.type]=[];
-    grouped[r.type].push(r);
-  });
-  let html='';let idx=0;
-  Object.entries(groups).forEach(([type,label])=>{
-    if(!grouped[type])return;
-    html+=`<div class="sr-label">${label}</div>`;
-    grouped[type].forEach(r=>{
-      html+=`<div class="sr-item" data-idx="${idx}" onmousedown="searchGo(${idx})">
-        <div class="sr-icon" style="background:${r.iconBg}">${r.icon}</div>
-        <div style="flex:1;min-width:0"><div class="sr-main">${r.label}</div><div class="sr-sub">${r.sub}</div></div>
-      </div>`;
-      idx++;
-    });
-    html+=`<div class="sr-divider"></div>`;
-  });
-  box._results=results.slice(0,20);
-  box.innerHTML=html;
-  box.classList.add('open');
+const box=document.getElementById('searchResults');
+if(!results.length){
+box.innerHTML=`<div class="sr-empty">Sin resultados para "<strong>${q}</strong>"</div>`;
+box.classList.add('open');
+box._results=[];
+return;
+}
+// Group by type
+const groups={patient:'👤 Pacientes',diary:'📝 Diario clínico',tx:'🦷 Tratamientos',appt:'📅 Citas',rx:'💊 Recetas'};
+const grouped={};
+results.slice(0,20).forEach(r=>{
+if(!grouped[r.type])grouped[r.type]=[];
+grouped[r.type].push(r);
+});
+let html='';let idx=0;
+const flat=[]; // FIX: guardar los resultados en el MISMO orden en que se muestran
+Object.entries(groups).forEach(([type,label])=>{
+if(!grouped[type])return;
+html+=`<div class="sr-label">${label}</div>`;
+grouped[type].forEach(r=>{
+flat[idx]=r;
+html+=`<div class="sr-item" data-idx="${idx}" onmousedown="searchGo(${idx})">
+<div class="sr-icon" style="background:${r.iconBg}">${r.icon}</div>
+<div style="flex:1;min-width:0"><div class="sr-main">${r.label}</div><div class="sr-sub">${r.sub}</div></div>
+</div>`;
+idx++;
+});
+html+=`<div class="sr-divider"></div>`;
+});
+box._results=flat;
+box.innerHTML=html;
+box.classList.add('open');
 }
 
 function showResults(){
