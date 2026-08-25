@@ -5,11 +5,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>OdontoApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --sb:#0f172a;--sb2:#1e293b;--sb3:#334155;--sbtext:#cbd5e1;--sbactive:#38bdf8;
-  --accent:#0ea5e9;--accent2:#0284c7;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;
+  --accent:#0ea5e9;--accent2:#0284c7;--green:#10b981;--red:#ef4444;--amber:#b98a4e;--purple:#8b5cf6;
   --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--text2:#64748b;--text3:#94a3b8;
   --cal-today:#eff6ff;--cal-today-header:#eff6ff;--cal-today-cell:#fafeff;--cal-weekend:#fafafa;--cal-hover:#f0f9ff;
 }
@@ -101,7 +104,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .kpi-sub{font-size:10px;color:var(--text3);margin-top:4px}
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
 .badge-green{background:#d1fae5;color:#065f46}
-.badge-amber{background:#fef3c7;color:#92400e}
+.badge-amber{background:#f0e7d8;color:#6b4a2f}
 .badge-red{background:#fee2e2;color:#991b1b}
 .badge-blue{background:#dbeafe;color:#1e40af}
 .row-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
@@ -126,7 +129,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .diary-date{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
 .diary-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
 .diary-body{font-size:12px;color:var(--text2);line-height:1.6}
-.diary-alert{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:20px}
+.diary-alert{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:#6b4a2f;background:#f0e7d8;padding:3px 10px;border-radius:20px}
 .chart-bar-wrap{display:flex;align-items:flex-end;gap:4px;height:110px;padding-top:10px}
 .chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
 .chart-bar{width:100%;border-radius:4px 4px 0 0;min-height:3px}
@@ -136,7 +139,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .today-appt{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .today-appt:last-child{border:none}
 .time-badge{background:var(--accent);color:#fff;padding:4px 10px;border-radius:7px;font-size:11px;font-weight:700;min-width:56px;text-align:center;flex-shrink:0}
-.bday-card{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:14px}
+.bday-card{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#f0e7d8,#e6d3b3);border:1px solid #dcc39c;border-radius:12px;padding:14px;margin-bottom:14px}
 .odo-sec-lbl{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--text2);text-align:center;margin-bottom:8px;text-transform:uppercase}
 .odo-sec-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 8px;margin-bottom:12px;overflow-x:auto}
 .teeth-row{display:flex;justify-content:center;gap:5px}
@@ -240,6 +243,1632 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .upload-area{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s}
 .upload-area:hover{border-color:var(--accent)}
 .upload-area input[type=file]{display:none}
+
+body.pt-open #tabsBar{position:relative;z-index:6;max-width:1080px;margin:0 auto;padding:6px 12px;border:1px solid var(--border);border-top:none;border-bottom:none;border-radius:0;background:var(--card);box-shadow:0 24px 70px rgba(0,0,0,.25)}
+body.pt-open .tab{border-bottom:none;border-radius:10px;padding:9px 13px;margin:2px}
+body.pt-open .tab.active{background:var(--accent);color:#fff}
+body.pt-open .content{position:relative;z-index:6;max-width:1080px;margin:0 auto 24px;border:1px solid var(--border);border-top:none;border-radius:0 0 18px 18px;background:var(--card);box-shadow:0 24px 70px rgba(0,0,0,.25);padding:20px 22px}
+/* ═══ VENTANA DE PACIENTE v2 (ficha flotante) ═══ */
+#ptWinHeader:empty{display:none}
+body.pt-open::before{content:'';position:fixed;inset:0;background:rgba(15,23,42,.38);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);z-index:40;pointer-events:none}
+body.pt-open #ptWinHeader{position:relative;z-index:41;width:min(1100px,calc(100vw - 48px));margin:26px auto 0}
+.ptw-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-radius:18px 18px 0 0;border:1px solid rgba(255,255,255,.25);border-bottom:none;background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.22)}
+.ptw-info{display:flex;align-items:center;gap:14px;min-width:0}
+.ptw-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;flex-shrink:0;border:2px solid rgba(255,255,255,.55);background:rgba(255,255,255,.18)}
+.ptw-name{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.ptw-sub{font-size:11px;opacity:.92;margin-top:2px}
+.ptw-actions{display:flex;gap:8px;flex-shrink:0}
+.ptw-btn{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.16);color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.ptw-btn:hover{background:rgba(255,255,255,.3);transform:translateY(-1px)}
+body.pt-open #tabsBar{position:relative;z-index:41;width:min(1100px,calc(100vw - 48px));margin:0 auto;padding:6px 10px;border:1px solid var(--border);border-top:none;border-bottom:none;border-radius:0;background:var(--card);box-shadow:none}
+body.pt-open .tab{border-bottom:none;border-radius:10px;margin:2px;padding:9px 14px}
+body.pt-open .tab.active{background:var(--accent);color:#fff}
+body.pt-open .content{position:relative;z-index:41;width:min(1100px,calc(100vw - 48px));margin:0 auto 28px;border:1px solid var(--border);border-top:none;border-radius:0 0 18px 18px;background:var(--card);box-shadow:0 24px 60px rgba(0,0,0,.2);padding:20px 22px}
+body.pt-open .content .card{background:var(--bg)}
+/* ═══ TEMA "LAGOON MINIMAL" — Scooter / Alabaster / Sapphire ═══ */
+:root{
+--sb:#063154;--sb2:#0b406c;--sb3:#1d5482;--sbtext:#bcc5cc;--sbactive:#2f9d94;
+--accent:#2f9d94;--accent2:#025f67;--green:#10b981;--red:#e05252;--amber:#e8a33d;--purple:#8b5cf6;
+--bg:#f7f6f2;--card:#ffffff;--border:#dfe6ea;--text:#063154;--text2:#48627a;--text3:#8ca0ae;
+--cal-today:#e9f5f4;--cal-today-header:#e9f5f4;--cal-today-cell:#f5fbfa;--cal-weekend:#fbfaf7;--cal-hover:#edf6f5;
+}
+body.dark-mode{
+--bg:#041c30;--card:#0a3151;--border:#1c4c76;--text:#f7f6f2;--text2:#bcc5cc;--text3:#67809a;
+--sb:#02141f;--sb2:#062a44;--sb3:#0e3e63;
+--cal-today:#0d3d5c;--cal-today-header:#0d3d5c;--cal-today-cell:#0a3151;--cal-weekend:#062a44;--cal-hover:#0d3d5c;
+}
+body{font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif}
+.sb-item{border-left:none;border-radius:10px;margin:2px 8px;padding:9px 12px}
+.sb-item:hover{background:var(--sb2);color:#fff}
+.sb-item.active{background:rgba(47,157,148,.16);color:var(--sbactive)}
+.sb-pt:hover{background:var(--sb2)}
+.sb-pt.active{background:rgba(47,157,148,.22)}
+.sb-add{border-radius:10px}
+.card,.kpi{border-radius:18px;box-shadow:0 1px 2px rgba(6,49,84,.05),0 12px 32px -16px rgba(6,49,84,.12)}
+.modal{border-radius:24px}
+.btn-primary{border-radius:12px}
+.btn-sm,.btn-sec,.del-btn,.done-btn,.comp-btn{border-radius:10px}
+.dash-greeting{font-weight:300;font-size:30px;letter-spacing:-.02em}
+.tb-title{font-weight:600}
+.tooth-num{color:#025f67}
+.form-group input,.form-group select,.form-group textarea{background:#fbfbf9;border-radius:10px}
+body.dark-mode .form-group input,body.dark-mode .form-group select,body.dark-mode .form-group textarea{background:#041c30}
+.search-bar input:focus{box-shadow:0 0 0 3px rgba(47,157,148,.18)}
+::-webkit-scrollbar-thumb{background:#bcc5cc;border-radius:4px}
+body.pt-open .main{position:fixed;inset:0;z-index:41;background:transparent}
+body.pt-open .topbar{display:none}
+/* ═══ ESTÉTICA ELEGANTE ═══ */
+body{font-family:'Manrope','Segoe UI',system-ui,-apple-system,sans-serif}
+.dash-greeting{font-weight:300;font-size:32px;letter-spacing:-.02em}
+.dash-frase{margin:8px 0 18px;font-size:13px;font-style:italic;color:var(--text2);font-weight:500;max-width:640px;line-height:1.5}
+.bday-card{background:linear-gradient(135deg,#e7f4f2,#d3e9e5);border:1px solid #bcd9d4}
+.diary-alert{background:#e7f4f2;color:#0b5d54}
+.badge-amber{background:#e9e2d4;color:#6b5233}
+</style>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   ODONTOAPP — SISTEMA DE DISEÑO PROFESIONAL
+   Arquitectura: Design Tokens + Componentes + Utilidades
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── 1. RESET & BASE ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* 🎨 Paleta Lagoon (tema claro por defecto) */
+  --color-primary:        #2f9d94;
+  --color-primary-hover:  #025f67;
+  --color-primary-light:  rgba(47, 157, 148, 0.12);
+  --color-primary-soft:   #e9f5f4;
+  
+  --color-success:        #10b981;
+  --color-success-soft:   #d1fae5;
+  --color-warning:        #e8a33d;
+  --color-warning-soft:   #fef3c7;
+  --color-danger:         #e05252;
+  --color-danger-soft:    #fee2e2;
+  --color-info:           #3b82f6;
+  --color-info-soft:      #dbeafe;
+  --color-purple:         #8b5cf6;
+
+  /* 🖼️ Superficies */
+  --surface-bg:           #f7f6f2;
+  --surface-card:         #ffffff;
+  --surface-elevated:     #ffffff;
+  --surface-sidebar:      #063154;
+  --surface-sidebar-2:    #0b406c;
+  --surface-sidebar-3:    #1d5482;
+
+  /* ✍️ Tipografía */
+  --text-primary:         #063154;
+  --text-secondary:       #48627a;
+  --text-tertiary:        #8ca0ae;
+  --text-inverse:         #ffffff;
+  --text-sidebar:         #bcc5cc;
+
+  /* 📏 Bordes y sombras */
+  --border-color:         #dfe6ea;
+  --border-soft:          #e8ecef;
+  --shadow-xs:            0 1px 2px rgba(6, 49, 84, 0.04);
+  --shadow-sm:            0 2px 8px rgba(6, 49, 84, 0.06);
+  --shadow-md:            0 4px 16px rgba(6, 49, 84, 0.08);
+  --shadow-lg:            0 12px 32px rgba(6, 49, 84, 0.12);
+  --shadow-xl:            0 24px 60px rgba(6, 49, 84, 0.18);
+  --shadow-glow:          0 0 0 3px rgba(47, 157, 148, 0.18);
+
+  /* 📐 Spacing scale (4px base) */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;
+  --space-4: 16px;  --space-5: 20px;  --space-6: 24px;
+  --space-8: 32px;  --space-10: 40px; --space-12: 48px;
+
+  /* 🔤 Tipografía */
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Consolas', monospace;
+
+  --fs-xs:   10px;   --lh-xs:   14px;
+  --fs-sm:   11px;   --lh-sm:   16px;
+  --fs-base: 13px;   --lh-base: 20px;
+  --fs-md:   14px;   --lh-md:   22px;
+  --fs-lg:   16px;   --lh-lg:   24px;
+  --fs-xl:   20px;   --lh-xl:   28px;
+  --fs-2xl:  26px;   --lh-2xl:  32px;
+  --fs-3xl:  30px;   --lh-3xl:  36px;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semi:    600;
+  --fw-bold:    700;
+  --fw-black:   800;
+
+  /* 🎯 Radios */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  24px;
+  --radius-full: 999px;
+
+  /* ⚡ Transiciones */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-slow: 320ms;
+
+  /* 📐 Layout */
+  --sidebar-w: 240px;
+  --topbar-h: 60px;
+  --tabs-h: 48px;
+}
+
+/* 🌙 DARK MODE — Tema real, no parche */
+body.dark-mode {
+  --surface-bg:         #041c30;
+  --surface-card:       #0a3151;
+  --surface-elevated:   #0d3d5c;
+  --surface-sidebar:    #02141f;
+  --surface-sidebar-2:  #062a44;
+  --surface-sidebar-3:  #0e3e63;
+
+  --text-primary:       #f7f6f2;
+  --text-secondary:     #bcc5cc;
+  --text-tertiary:      #67809a;
+
+  --border-color:       #1c4c76;
+  --border-soft:        #153a5a;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* ─── 2. BASE TYPOGRAPHY & BODY ─── */
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  font-weight: var(--fw-regular);
+  color: var(--text-primary);
+  background: var(--surface-bg);
+  height: 100vh;
+  overflow: hidden;
+  transition: background var(--t-slow) var(--ease-out), color var(--t-slow) var(--ease-out);
+}
+
+h1, h2, h3, h4 { font-weight: var(--fw-bold); letter-spacing: -0.02em; }
+
+/* Scrollbar refinado */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { 
+  background: var(--text-tertiary); 
+  border-radius: var(--radius-full);
+  transition: background var(--t-base);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* ─── 3. LAYOUT PRINCIPAL ─── */
+.app {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+/* ─── 4. SIDEBAR — Glassmorphism sutil ─── */
+.sb {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: linear-gradient(180deg, var(--surface-sidebar) 0%, var(--surface-sidebar-2) 100%);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 20;
+}
+
+.sb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(47, 157, 148, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+.sb-logo {
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  transition: background var(--t-base);
+  position: relative;
+  z-index: 1;
+}
+
+.sb-logo:hover { background: rgba(255, 255, 255, 0.03); }
+
+.sb-logo-img {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(47, 157, 148, 0.35);
+  transition: transform var(--t-base) var(--ease-spring);
+}
+
+.sb-logo:hover .sb-logo-img { transform: scale(1.05) rotate(-2deg); }
+
+.sb-logo-img svg { width: 22px; height: 22px; }
+.sb-logo-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.sb-logo-name {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text-inverse);
+  letter-spacing: -0.01em;
+}
+
+.sb-logo-prof {
+  font-size: var(--fs-xs);
+  color: var(--text-sidebar);
+  margin-top: 2px;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sb-nav { padding: var(--space-2) 0; position: relative; z-index: 1; }
+
+.sb-section {
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-sidebar);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  margin: 2px var(--space-2);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  color: var(--text-sidebar);
+  transition: all var(--t-base) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+.sb-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 3px;
+  background: var(--color-primary);
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  transform: scaleY(0);
+  transition: transform var(--t-base) var(--ease-spring);
+}
+
+.sb-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-inverse);
+  transform: translateX(2px);
+}
+
+.sb-item.active {
+  background: rgba(47, 157, 148, 0.15);
+  color: var(--color-primary);
+}
+
+.sb-item.active::before { transform: scaleY(1); }
+
+.sb-item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.sb-item span {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+}
+
+.sb-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin: var(--space-1) 0;
+}
+
+.sb-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.sb-pts-hdr {
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-sidebar);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.sb-search { padding: 0 var(--space-3) var(--space-2); }
+
+.sb-search input {
+  width: 100%;
+  padding: 7px var(--space-3);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  color: #e2e8f0;
+  outline: none;
+  transition: all var(--t-base);
+  font-family: inherit;
+}
+
+.sb-search input:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(47, 157, 148, 0.15);
+}
+
+.sb-search input::placeholder { color: #64748b; }
+
+.sb-pt-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0 var(--space-2);
+}
+
+.sb-pt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--t-base) var(--ease-out);
+  margin-bottom: 2px;
+}
+
+.sb-pt:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
+}
+
+.sb-pt.active {
+  background: rgba(47, 157, 148, 0.22);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.sb-av {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-inverse);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.sb-pt-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: #e2e8f0;
+}
+
+.sb-pt-meta {
+  font-size: var(--fs-xs);
+  color: #64748b;
+}
+
+.sb-add {
+  margin: var(--space-2) var(--space-3) var(--space-3);
+  padding: 9px;
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--t-base) var(--ease-out);
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(47, 157, 148, 0.3);
+}
+
+.sb-add:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(47, 157, 148, 0.4);
+}
+
+.sb-add:active { transform: translateY(0); }
+
+/* ─── 5. MAIN CONTENT ─── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--surface-bg);
+}
+
+.topbar {
+  height: var(--topbar-h);
+  padding: 0 var(--space-6);
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
+}
+
+.tb-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.tb-badge {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  background: var(--surface-bg);
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  margin-left: var(--space-2);
+  border: 1px solid var(--border-soft);
+}
+
+.search-bar {
+  position: relative;
+  flex: 1;
+  max-width: 420px;
+  margin: 0 var(--space-4);
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 9px 54px 9px 38px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-base);
+  background: var(--surface-bg);
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  transition: all var(--t-base);
+}
+
+.search-bar input:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+  background: var(--surface-card);
+}
+
+.search-bar .s-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--fs-md);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.search-bar .s-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  font-family: var(--font-mono);
+}
+
+.search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: 9999;
+  max-height: 420px;
+  overflow-y: auto;
+  display: none;
+  animation: slideDown var(--t-base) var(--ease-out);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.search-results.open { display: block; }
+
+.sr-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+}
+
+.sr-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+
+.sr-item:hover, .sr-item.sr-active { background: var(--surface-bg); }
+
+.sr-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
+}
+
+.sr-main {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semi);
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sr-sub {
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sr-empty {
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--fs-base);
+  color: var(--text-tertiary);
+}
+
+.sr-divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin: var(--space-1) 0;
+}
+
+.tb-right { display: flex; gap: var(--space-2); }
+
+/* ─── 6. TABS — Diseño moderno tipo pills ─── */
+.tabs {
+  display: flex;
+  padding: var(--space-1) var(--space-6);
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow-x: auto;
+  gap: 2px;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  padding: 10px var(--space-4);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  transition: all var(--t-base) var(--ease-out);
+  position: relative;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-bg);
+}
+
+.tab.active {
+  color: var(--text-inverse);
+  background: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(47, 157, 148, 0.3);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface-bg);
+}
+
+/* ─── 7. CARDS — Sistema coherente ─── */
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--t-base), transform var(--t-base);
+}
+
+.card:hover { box-shadow: var(--shadow-sm); }
+
+.card-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.card-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+
+/* ─── 8. GRIDS ─── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
+
+@media (max-width: 1100px) {
+  .grid4 { grid-template-columns: repeat(2, 1fr); }
+  .grid3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .grid4, .grid3, .grid2 { grid-template-columns: 1fr; }
+}
+
+/* ─── 9. KPIs — Tarjetas métricas elegantes ─── */
+.kpi {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--t-base) var(--ease-out);
+}
+
+.kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-info));
+  opacity: 0;
+  transition: opacity var(--t-base);
+}
+
+.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi:hover::before { opacity: 1; }
+
+.kpi-label {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  font-weight: var(--fw-medium);
+}
+
+.kpi-val {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.kpi-sub {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+}
+
+/* ─── 10. BOTONES — Sistema completo ─── */
+.btn-primary, .btn-sec, .btn-sm, .btn-danger {
+  font-family: inherit;
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  transition: all var(--t-base) var(--ease-out);
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary {
+  padding: 10px 22px;
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  box-shadow: 0 2px 8px rgba(47, 157, 148, 0.25);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+  opacity: 0;
+  transition: opacity var(--t-base);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(47, 157, 148, 0.4);
+}
+
+.btn-primary:hover::before { opacity: 1; }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-sec {
+  padding: 9px 18px;
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+}
+
+.btn-sec:hover {
+  background: var(--surface-bg);
+  color: var(--text-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  border-color: var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+}
+
+.btn-sm:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.btn-danger {
+  background: var(--color-danger) !important;
+  color: var(--text-inverse) !important;
+  box-shadow: 0 2px 8px rgba(224, 82, 82, 0.25);
+}
+
+.btn-danger:hover {
+  background: #c73e3e !important;
+  transform: translateY(-1px);
+}
+
+/* Focus visible accesible */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ─── 11. FORMULARIOS ─── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.form-full { grid-template-columns: 1fr; }
+
+.form-group label {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+  font-weight: var(--fw-semi);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 9px var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+  outline: none;
+  background: var(--surface-card);
+  transition: all var(--t-base);
+  font-family: inherit;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group select,
+body.dark-mode .form-group textarea {
+  background: var(--surface-bg);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.6;
+}
+
+/* ─── 12. MODALES — Glassmorphism profesional ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 49, 84, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn var(--t-base) var(--ease-out);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal {
+  background: var(--surface-card);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  animation: modalIn var(--t-slow) var(--ease-spring);
+  border: 1px solid var(--border-color);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-lg { width: 700px; }
+
+.modal-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.modal-footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ─── 13. BADGES ─── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  gap: 4px;
+}
+
+.badge-green { background: var(--color-success-soft); color: #065f46; }
+.badge-amber { background: var(--color-warning-soft); color: #92400e; }
+.badge-red   { background: var(--color-danger-soft);  color: #991b1b; }
+.badge-blue  { background: var(--color-info-soft);    color: #1e40af; }
+
+/* ─── 14. ROWS / LISTAS ─── */
+.row-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--t-fast);
+}
+
+.row-item:hover { background: var(--surface-bg); margin: 0 calc(var(--space-3) * -1); padding: var(--space-3); border-radius: var(--radius-md); }
+.row-item:last-child { border: none; }
+
+.row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(47, 157, 148, 0.1);
+}
+
+.row-name {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.row-meta {
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.row-price {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  margin-left: auto;
+  font-feature-settings: 'tnum';
+}
+
+.pay-amount { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-success); font-feature-settings: 'tnum'; }
+.pay-egreso { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-danger); font-feature-settings: 'tnum'; }
+
+/* ─── 15. ACCIONES RÁPIDAS ─── */
+.del-btn, .done-btn, .comp-btn {
+  padding: 5px 11px;
+  font-size: var(--fs-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: var(--fw-semi);
+  transition: all var(--t-base);
+  border: 1px solid transparent;
+  font-family: inherit;
+}
+
+.del-btn {
+  background: var(--surface-bg);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.del-btn:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: #fca5a5;
+  transform: scale(1.05);
+}
+
+.done-btn {
+  background: var(--color-success-soft);
+  color: #065f46;
+}
+
+.done-btn:hover {
+  background: #a7f3d0;
+  transform: scale(1.05);
+}
+
+.comp-btn {
+  background: var(--color-info-soft);
+  color: #1e40af;
+  margin-left: auto;
+}
+
+.comp-btn:hover {
+  background: #bfdbfe;
+  transform: scale(1.05);
+}
+
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+/* ─── 16. TOTAL BAR ─── */
+.total-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-info-soft);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
+  border: 1px solid #93c5fd;
+}
+
+.total-bar.debt { background: var(--color-danger-soft); border-color: #fca5a5; }
+
+.total-lbl { font-size: var(--fs-base); font-weight: var(--fw-semi); color: #1e40af; }
+.total-lbl.debt { color: #991b1b; }
+.total-val { font-size: var(--fs-lg); font-weight: var(--fw-bold); color: #1e40af; font-feature-settings: 'tnum'; }
+.total-val.debt { color: #991b1b; }
+
+/* ─── 17. APPOINTMENTS ─── */
+.appt-date-box {
+  width: 46px;
+  text-align: center;
+  background: var(--surface-bg);
+  border-radius: var(--radius-md);
+  padding: 6px 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-soft);
+}
+
+.appt-day { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text-primary); line-height: 1; font-feature-settings: 'tnum'; }
+.appt-mon { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.time-badge {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  min-width: 56px;
+  text-align: center;
+  flex-shrink: 0;
+  font-feature-settings: 'tnum';
+  box-shadow: 0 2px 6px rgba(47, 157, 148, 0.3);
+}
+
+/* ─── 18. DIARY ─── */
+.diary-item {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.diary-item:last-child { border: none; }
+
+.diary-date {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-1);
+}
+
+.diary-title {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semi);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.diary-body {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.diary-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: #92400e;
+  background: var(--color-warning-soft);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid #fcd34d;
+}
+
+/* ─── 19. DASHBOARD ─── */
+.dash-greeting {
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-3xl);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.dash-sub {
+  font-size: var(--fs-base);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-5);
+}
+
+.today-appt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+  transition: transform var(--t-fast);
+}
+
+.today-appt:hover { transform: translateX(2px); }
+.today-appt:last-child { border: none; }
+
+.bday-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: linear-gradient(135deg, var(--color-warning-soft), #fde68a);
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(252, 211, 77, 0.4); }
+  50% { box-shadow: var(--shadow-md), 0 0 0 8px rgba(252, 211, 77, 0); }
+}
+
+/* ─── 20. ODONTOGRAMA ─── */
+.odo-sec-lbl {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+.odo-sec-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-2);
+  margin-bottom: var(--space-3);
+  overflow-x: auto;
+  box-shadow: var(--shadow-xs);
+}
+
+.teeth-row { display: flex; justify-content: center; gap: 5px; }
+
+.tooth-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tooth-num {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary-hover);
+  font-family: var(--font-mono);
+}
+
+.odo-legend {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.odo-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 7px;
+}
+
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+/* ─── 21. TOOTH POPUP ─── */
+.tooth-popup {
+  position: fixed;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  z-index: 9999;
+  width: 220px;
+  box-shadow: var(--shadow-xl);
+  display: none;
+  max-height: 82vh;
+  overflow-y: auto;
+  animation: popIn var(--t-base) var(--ease-spring);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.tooth-popup.show { display: block; }
+
+.tp-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  margin-bottom: 7px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.tp-opt {
+  padding: 6px 8px;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: all var(--t-fast);
+}
+
+.tp-opt:hover { background: var(--surface-bg); transform: translateX(2px); }
+.tp-opt.active { background: var(--color-info-soft); color: #1e40af; }
+
+.tp-section {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  font-weight: var(--fw-bold);
+  padding: 5px 0 3px;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tp-section:first-child { border: none; padding-top: 0; }
+
+.tp-clear {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  text-align: center;
+  font-family: inherit;
+  transition: all var(--t-base);
+}
+
+.tp-clear:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: #fca5a5;
+}
+
+/* ─── 22. PATIENT WINDOW FLOATING ─── */
+body.pt-open::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 49, 84, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 40;
+  pointer-events: none;
+  animation: fadeIn var(--t-base);
+}
+
+body.pt-open #ptWinHeader {
+  position: relative;
+  z-index: 41;
+  width: min(1100px, calc(100vw - 48px));
+  margin: var(--space-6) auto 0;
+}
+
+#ptWinHeader:empty { display: none; }
+
+.ptw-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: linear-gradient(120deg, var(--color-primary), var(--color-primary-hover));
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.ptw-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15), transparent 50%);
+  pointer-events: none;
+}
+
+.ptw-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.ptw-av {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--fw-bold);
+  color: var(--text-inverse);
+  font-size: var(--fs-md);
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ptw-name {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+}
+
+.ptw-sub {
+  font-size: var(--fs-sm);
+  opacity: 0.92;
+  margin-top: 2px;
+}
+
+.ptw-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.ptw-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-inverse);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--t-base) var(--ease-out);
+}
+
+.ptw-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+body.pt-open #tabsBar {
+  position: relative;
+  z-index: 41;
+  width: min(1100px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 6px var(--space-3);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  background: var(--surface-card);
+}
+
+body.pt-open .tab {
+  border-radius: var(--radius-md);
+  margin: 2px;
+  padding: 9px 14px;
+}
+
+body.pt-open .content {
+  position: relative;
+  z-index: 41;
+  width: min(1100px, calc(100vw - 48px));
+  margin: 0 auto var(--space-6);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-5);
+}
+
+body.pt-open .content .card { background: var(--surface-bg); }
+
+body.pt-open .main { position: fixed; inset: 0; z-index: 41; background: transparent; overflow-y: auto; }
+body.pt-open .topbar { display: none; }
+
+/* ─── 23. UTILIDADES ─── */
+.fl { font-size: var(--fs-sm); color: var(--text-tertiary); margin-bottom: 3px; font-weight: var(--fw-medium); }
+.fv { font-size: var(--fs-md); font-weight: var(--fw-medium); color: var(--text-primary); }
+
+.color-swatches { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-2); }
+
+.cs {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform var(--t-fast) var(--ease-spring);
+  box-shadow: var(--shadow-sm);
+}
+
+.cs:hover { transform: scale(1.15); }
+.cs.sel { border-color: var(--text-primary); box-shadow: 0 0 0 2px var(--color-primary); }
+
+.upload-area {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--t-base);
+}
+
+.upload-area:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.upload-area input[type=file] { display: none; }
+
+/* ─── 24. ANIMACIONES GLOBALES ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card, .kpi { animation: fadeInUp var(--t-slow) var(--ease-out) backwards; }
+.grid2 .card:nth-child(1), .grid3 .kpi:nth-child(1), .grid4 .kpi:nth-child(1) { animation-delay: 0ms; }
+.grid2 .card:nth-child(2), .grid3 .kpi:nth-child(2), .grid4 .kpi:nth-child(2) { animation-delay: 60ms; }
+.grid3 .kpi:nth-child(3), .grid4 .kpi:nth-child(3) { animation-delay: 120ms; }
+.grid4 .kpi:nth-child(4) { animation-delay: 180ms; }
+
+/* ─── 25. RESPONSIVE ─── */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 64px; }
+  .sb-logo-name, .sb-logo-prof, .sb-section, .sb-item span, .sb-pts-hdr, .sb-pt-name, .sb-pt-meta { display: none; }
+  .sb-logo { justify-content: center; padding: var(--space-3); }
+  .sb-item { justify-content: center; padding: var(--space-3); }
+  .sb-search { display: none; }
+  .sb-add { padding: 10px; font-size: 0; }
+  .sb-add::before { content: '+'; font-size: 18px; }
+}
+
+@media (max-width: 600px) {
+  .topbar { padding: 0 var(--space-3); }
+  .content { padding: var(--space-3); }
+  .modal { padding: var(--space-4); }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* ─── 26. PRINT ─── */
+@media print {
+  .sb, .topbar, .tabs, .ptw-card, .modal-overlay, .tooth-popup { display: none !important; }
+  body, .main, .content { background: white !important; overflow: visible !important; }
+  .card { box-shadow: none !important; break-inside: avoid; }
+}
+
+/* ─── 27. ACCESIBILIDAD ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+/* ── Avisos de alergias/antecedentes en cabecera ── */
+.ptw-alerts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 22px;background:var(--card);border:1px solid var(--border);border-top:none}
+.ptw-alert{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid;letter-spacing:.02em}
+.ptw-alert.red{color:#8a2b2b;background:#fdecec;border-color:#f0b6b6;animation:ptwPulse 2.2s ease-in-out infinite}
+.ptw-alert.amber{color:#7a5210;background:#fdf3e0;border-color:#ecd3a1}
+@keyframes ptwPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,82,82,.30)}50%{box-shadow:0 0 0 7px rgba(224,82,82,0)}}
+/* ── Botones de alerta en la barra verde + tooltip hover ── */
+.ptw-alerts-inline{display:flex;gap:8px;margin-left:16px;flex-shrink:0}
+.ptw-alert-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;letter-spacing:.02em;transition:transform .15s;animation:ptwPulse 2.2s ease-in-out infinite}
+.ptw-alert-btn:hover{transform:scale(1.07)}
+.ptw-alert-btn.red{background:#fdecec;border-color:#f0b6b6;color:#8a2b2b}
+.ptw-alert-btn.amber{background:#fdf3e0;border-color:#ecd3a1;color:#7a5210}
+@keyframes ptwPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,82,82,.25)}50%{box-shadow:0 0 0 6px rgba(224,82,82,0)}}
+#ptAlertTip{position:fixed;display:none;z-index:9999;max-width:320px;background:#0f172a;color:#f1f5f9;font-size:12px;line-height:1.5;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none}
+#ptAlertTip strong{color:#fbbf24}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -320,17 +1949,18 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="tb-right" id="topActions"></div>
     </div>
   </div>
+<div id="ptWinHeader"></div>
   <div class="tabs" id="tabsBar" style="display:none">
-    <div class="tab active" onclick="switchTab('datos',this)">Datos</div>
-    <div class="tab" onclick="switchTab('odontograma',this)">Odontograma</div>
-    <div class="tab" onclick="switchTab('diario',this)">Diario Clínico</div>
-    <div class="tab" onclick="switchTab('tratamientos',this)">Tratamientos</div>
-    <div class="tab" onclick="switchTab('pagos',this)">Pagos</div>
-    <div class="tab" onclick="switchTab('citas',this)">Citas</div>
-    <div class="tab" onclick="switchTab('imagenes',this)">📷 Imágenes</div>
-    <div class="tab" onclick="switchTab('consentimientos',this)">📋 Consentimientos</div>
-    <div class="tab" onclick="switchTab('presupuestos',this)">💰 Presupuesto</div>
-    <div class="tab" onclick="switchTab('recetas',this)">💊 Recetas</div>
+    <div class="tab active" onclick="switchTab('datos',this)">📄 Datos</div>
+<div class="tab" onclick="switchTab('odontograma',this)">🦷 Odontograma</div>
+<div class="tab" onclick="switchTab('diario',this)">📝 Diario Clínico</div>
+<div class="tab" onclick="switchTab('tratamientos',this)">🪥 Tratamientos</div>
+<div class="tab" onclick="switchTab('pagos',this)">💳 Pagos</div>
+<div class="tab" onclick="switchTab('citas',this)">📅 Citas</div>
+<div class="tab" onclick="switchTab('imagenes',this)">📷 Imágenes</div>
+<div class="tab" onclick="switchTab('consentimientos',this)">📋 Consentimientos</div>
+<div class="tab" onclick="switchTab('presupuestos',this)">💰 Presupuesto</div>
+<div class="tab" onclick="switchTab('recetas',this)">💊 Recetas</div>
   </div>
   <div class="content" id="mainContent"></div>
 </div>
@@ -461,11 +2091,25 @@ function legSVG(item,isSurf){
 }
 
 // ═══ STATE ═══
-const COLORS=['#0ea5e9','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4'];
+const COLORS=['#0ea5e9','#10b981','#8b5cf6','#b98a4e','#ef4444','#ec4899','#06b6d4'];
 const MONTHS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const FRASES_DIA=[
+'La sonrisa es el mejor accesorio que puedes llevar.',
+'Pequeños progresos cada día construyen grandes sonrisas.',
+'Preferimos el cansancio de intentarlo al aburrimiento de no hacer nada.',
+'Una boca sana es el reflejo de un cuerpo sano.',
+'La constancia de hoy es la sonrisa de mañana.',
+'Cuida cada detalle; el paciente lo siente.',
+'El mejor tratamiento es la prevención.',
+'Haz que cada paciente salga con una razón para sonreír.'
+];
+function fraseDelDia(){
+const now=new Date();
+return FRASES_DIA[Math.floor((now-new Date(now.getFullYear(),0,0))/864e5)%FRASES_DIA.length];
+}
 const MONTHS_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 let patients=[],egresos=[],facturas=[],quickAppts=[],archivosContables=[],servicios=[],curPt=null,curTab='datos',curPage='dashboard';
-let selOdoTooth=null,selOdoZone=null,nextId=1,nextEgId=1,nextFactId=1,nextRecetaId=1,nextPresupId=1,logoColor='#0ea5e9',logoImg=null;
+let selOdoTooth=null,selOdoZone=null,nextId=1,nextEgId=1,nextFactId=1,nextRecetaId=1,nextPresupId=1,logoColor='#2f9d94',logoImg=null;
 let clinicaRUC='',clinicaDireccion='',clinicaTelefono='';
 
 function initials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase()}
@@ -629,8 +2273,10 @@ function showPage(page){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   const el=document.getElementById('nav-'+page);if(el)el.classList.add('active');
   document.getElementById('ptBadge').style.display='none';
-  document.getElementById('topActions').innerHTML='';
-  document.getElementById('tabsBar').style.display='none';
+document.getElementById('topActions').innerHTML='';
+document.getElementById('tabsBar').style.display='none';
+document.body.classList.remove('pt-open');
+document.getElementById('ptWinHeader').innerHTML='';
   renderSidebar();
   const titles={dashboard:'Dashboard',agenda:'Agenda de Citas',estadisticas:'Estadísticas',configuracion:'⚙️ Configuración'};
   document.getElementById('ptTitle').textContent=titles[page]||'Dashboard';
@@ -648,6 +2294,7 @@ function selectPt(id){
   document.getElementById('ptBadge').style.display='inline-flex';
   document.getElementById('topActions').innerHTML=`<button class="btn-sm" onclick="openDeletePt()">Eliminar</button><button class="btn-sm" onclick="editPt()">Editar</button>`;
   document.getElementById('tabsBar').style.display='flex';
+renderPtHeader();
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===0));
   renderTab();
 }
@@ -686,31 +2333,32 @@ function renderDashboard(){
   return`
   <div class="dash-greeting">${greeting} 👋</div>
   <div class="dash-sub">${now.toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'long'})} · ${todayAppts.length} cita${todayAppts.length!==1?'s':''} hoy</div>
-  ${bdToday.length?`<div class="bday-card"><div style="font-size:28px">🎂</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:#92400e">¡${bdToday[0].name} cumple años hoy!</div><div style="font-size:12px;color:#a16207">${calcAge(bdToday[0].birthdate)} años</div></div><button class="btn-sm" onclick="selectPt(${bdToday[0].id})">Ver ficha</button></div>`:''}
-  ${factPend.length?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:14px;padding:16px;margin-bottom:16px">
+<div class="dash-frase">"${fraseDelDia()}"</div>
+  ${bdToday.length?`<div class="bday-card"><div style="font-size:28px">🎂</div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:#063154">¡${bdToday[0].name} cumple años hoy!</div><div style="font-size:12px;color:#2f7d74">${calcAge(bdToday[0].birthdate)} años</div></div><button class="btn-sm" onclick="selectPt(${bdToday[0].id})">Ver ficha</button></div>`:''}
+  ${factPend.length?`<div style="background:#f0e7d8;border:1px solid #dcc39c;border-radius:14px;padding:16px;margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="font-size:24px">🧾</div>
         <div>
-          <div style="font-size:14px;font-weight:700;color:#92400e">${factPend.length} factura${factPend.length>1?'s':''} pendiente${factPend.length>1?'s':''} de emitir en el SRI</div>
-          <div style="font-size:12px;color:#a16207">Total: <strong>$${factPend.reduce((s,p)=>s+p.amount,0).toFixed(2)}</strong></div>
+          <div style="font-size:14px;font-weight:700;color:#6b4a2f">${factPend.length} factura${factPend.length>1?'s':''} pendiente${factPend.length>1?'s':''} de emitir en el SRI</div>
+          <div style="font-size:12px;color:#8a6a4a">Total: <strong>$${factPend.reduce((s,p)=>s+p.amount,0).toFixed(2)}</strong></div>
         </div>
       </div>
       <a href="https://facturadorsri.sri.gob.ec/portal-facturadorsri-internet/pages/comprobantes/factura/Factura.html" target="_blank"
-        style="padding:8px 14px;background:#f59e0b;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0">
+        style="padding:8px 14px;background:#b98a4e;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0">
         🌐 Ir al SRI
       </a>
     </div>
     ${factPend.slice(0,5).map(py=>`
       <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.6);border-radius:8px;margin-bottom:6px">
         <div style="flex:1">
-          <div style="font-size:12px;font-weight:600;color:#92400e">${py.ptName}</div>
-          <div style="font-size:11px;color:#a16207">${py.concept} · ${fmtDate(py.date)} · CI: ${py.cedula||'—'}</div>
+          <div style="font-size:12px;font-weight:600;color:#6b4a2f">${py.ptName}</div>
+          <div style="font-size:11px;color:#8a6a4a">${py.concept} · ${fmtDate(py.date)} · CI: ${py.cedula||'—'}</div>
         </div>
-        <div style="font-size:13px;font-weight:700;color:#92400e">$${py.amount.toFixed(2)}</div>
-        <button onclick="selectPt(${py.ptId})" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.8);border:1px solid #fcd34d;border-radius:6px;cursor:pointer;color:#92400e">Ver</button>
+        <div style="font-size:13px;font-weight:700;color:#6b4a2f">$${py.amount.toFixed(2)}</div>
+        <button onclick="selectPt(${py.ptId})" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.8);border:1px solid #dcc39c;border-radius:6px;cursor:pointer;color:#6b4a2f">Ver</button>
       </div>`).join('')}
-    ${factPend.length>5?`<div style="font-size:11px;color:#a16207;text-align:center;margin-top:4px">+${factPend.length-5} más pendientes</div>`:''}
+    ${factPend.length>5?`<div style="font-size:11px;color:#8a6a4a;text-align:center;margin-top:4px">+${factPend.length-5} más pendientes</div>`:''}
   </div>`:''}
   <div class="grid4" style="margin-bottom:16px">
     <div class="kpi"><div class="kpi-label">Pacientes</div><div class="kpi-val" style="color:var(--accent)">${patients.length}</div></div>
@@ -798,7 +2446,7 @@ function renderAgendaPage(){
         <div class="card-title" style="margin-bottom:10px">📋 Leyenda</div>
         <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
           <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:#dbeafe;border:1px solid #93c5fd"></div>Paciente registrado</div>
-          <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:#fef3c7;border:1px solid #fcd34d"></div>Cita rápida / sin ficha</div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:#f0e7d8;border:1px solid #dcc39c"></div>Cita rápida / sin ficha</div>
           <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:#d1fae5;border:1px solid #6ee7b7"></div>Completada</div>
           <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:#fee2e2;border:1px solid #fca5a5"></div>No asistió</div>
         </div>
@@ -842,8 +2490,8 @@ function buildAllAppts(){
 }
 
 function apptMiniCard(a, todayStr){
-  const bg = a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
-  const border = a.status==='completada'?'#6ee7b7':a.status==='no_asistio'?'#fca5a5':a.type==='quick'?'#fcd34d':'#93c5fd';
+  const bg = a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#f0e7d8':'#dbeafe';
+  const border = a.status==='completada'?'#6ee7b7':a.status==='no_asistio'?'#fca5a5':a.type==='quick'?'#dcc39c':'#93c5fd';
   const phone=a.phone||(a.ptId?patients.find(p=>p.id===a.ptId)?.phone:'');
   return`<div style="padding:8px;border-radius:8px;background:${bg};border:1px solid ${border};margin-bottom:6px">
     <div style="display:flex;align-items:center;gap:8px">
@@ -885,8 +2533,8 @@ function renderMonthView(allAppts, todayStr){
     html+=`<div onclick="openQuickAppt('${dateStr}')" style="background:${isToday?'var(--cal-today, #eff6ff)':isWeekend?'var(--cal-weekend, #fafafa)':'var(--card)'};min-height:90px;padding:6px;cursor:pointer;transition:background .1s;overflow:hidden;min-width:0" onmouseover="this.style.background='var(--cal-hover, #f0f9ff)'" onmouseout="this.style.background='${isToday?'var(--cal-today, #eff6ff)':isWeekend?'var(--cal-weekend, #fafafa)':'var(--card)'}'">
       <div style="font-size:13px;font-weight:${isToday?'700':'500'};color:${isToday?'#fff':'var(--text)'};width:22px;height:22px;border-radius:50%;background:${isToday?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;margin-bottom:3px">${day}</div>
       ${dayAppts.slice(0,3).map(a=>{
-        const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
-        const tc=a.status==='completada'?'#065f46':a.status==='no_asistio'?'#991b1b':a.type==='quick'?'#92400e':'#1e40af';
+        const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#f0e7d8':'#dbeafe';
+        const tc=a.status==='completada'?'#065f46':a.status==='no_asistio'?'#991b1b':a.type==='quick'?'#6b4a2f':'#1e40af';
         return`<div onclick="event.stopPropagation();openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="font-size:10px;padding:2px 4px;border-radius:4px;background:${bg};color:${tc};margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;max-width:100%">${a.time} ${a.ptName}</div>`;
       }).join('')}
       ${dayAppts.length>3?`<div style="font-size:10px;color:var(--text3);padding:1px 2px">+${dayAppts.length-3}</div>`:''}
@@ -928,8 +2576,8 @@ function renderWeekView(allAppts, todayStr){
       const isT=ds===todayStr;
       html+=`<div onclick="openQuickAppt('${ds}','${hr}')" style="background:${isT?'var(--cal-today-cell, #fafeff)':'var(--card)'};min-height:52px;padding:3px;border-top:1px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--cal-hover, #f0f9ff)'" onmouseout="this.style.background='${isT?'var(--cal-today-cell, #fafeff)':'var(--card)'}'">
         ${hrAppts.map(a=>{
-          const bg=a.status==='completada'?'#d1fae5':a.type==='quick'?'#fef3c7':'#dbeafe';
-          const tc=a.status==='completada'?'#065f46':a.type==='quick'?'#92400e':'#1e40af';
+          const bg=a.status==='completada'?'#d1fae5':a.type==='quick'?'#f0e7d8':'#dbeafe';
+          const tc=a.status==='completada'?'#065f46':a.type==='quick'?'#6b4a2f':'#1e40af';
           return`<div onclick="event.stopPropagation();openApptDetail('${a.id}','${a.type}','${a.ptId||''}')" style="font-size:10px;padding:3px 5px;border-radius:5px;background:${bg};color:${tc};margin-bottom:2px;cursor:pointer;font-weight:500">${a.time} ${a.ptName}<br><span style="font-weight:400;opacity:.8">${a.reason}</span></div>`;
         }).join('')}
       </div>`;
@@ -964,8 +2612,8 @@ function renderListView(allAppts, todayStr){
 }
 
 function listApptRow(a){
-  const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#fef3c7':'#dbeafe';
-  const tc=a.status==='completada'?'#065f46':a.status==='no_asistio'?'#991b1b':a.type==='quick'?'#92400e':'#1e40af';
+  const bg=a.status==='completada'?'#d1fae5':a.status==='no_asistio'?'#fee2e2':a.type==='quick'?'#f0e7d8':'#dbeafe';
+  const tc=a.status==='completada'?'#065f46':a.status==='no_asistio'?'#991b1b':a.type==='quick'?'#6b4a2f':'#1e40af';
   const statusLabel=a.status==='completada'?'Completada':a.status==='no_asistio'?'No asistió':'Pendiente';
   const phone=a.phone||(a.ptId?patients.find(p=>p.id===a.ptId)?.phone:'');
   return`<div style="padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--border);margin-bottom:6px">
@@ -1043,7 +2691,7 @@ function openQuickAppt(dateStr, timeStr){
         <div id="f_qa_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 10px 10px;z-index:600;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
       </div>
       <input type="hidden" id="f_qa_pt" value="">
-      <div id="f_qa_selected" style="display:none;margin-top:6px;padding:8px 12px;background:#d1fae5;border-radius:8px;font-size:12px;color:#065f46;display:flex;align-items:center;justify-content:space-between">
+      <div id="f_qa_selected" style="display:none;margin-top:6px;padding:8px 12px;background:#d1fae5;border-radius:8px;font-size:12px;color:#065f46;align-items:center;justify-content:space-between">
         <span id="f_qa_selected_name"></span>
         <button onclick="limpiarPacienteAppt()" style="background:none;border:none;color:#065f46;cursor:pointer;font-size:14px">✕</button>
       </div>
@@ -1141,7 +2789,7 @@ function openApptDetail(id, type, ptId){
     <div style="font-size:13px;color:var(--text2)">📅 ${fmtDate(appt.date)} — ${appt.time}</div>
     <div style="font-size:13px;color:var(--text2);margin-top:4px">🦷 ${appt.reason}</div>
     ${appt.notes?`<div style="font-size:12px;color:var(--text3);margin-top:4px">📝 ${appt.notes}</div>`:''}
-    ${appt.type==='quick'?`<div style="margin-top:8px;padding:6px 10px;background:#fef3c7;border-radius:7px;font-size:11px;color:#92400e">💬 Cita rápida — sin ficha de paciente</div>`:''}
+    ${appt.type==='quick'?`<div style="margin-top:8px;padding:6px 10px;background:#f0e7d8;border-radius:7px;font-size:11px;color:#6b4a2f">💬 Cita rápida — sin ficha de paciente</div>`:''}
   </div>
   <div class="form-row"><div class="form-group"><label>Fecha</label><input id="f_ad_date" type="date" value="${appt.date}"></div><div class="form-group"><label>Hora</label><input id="f_ad_time" type="time" value="${appt.time}"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Motivo</label><input id="f_ad_reason" value="${appt.reason}"></div></div>
@@ -1188,7 +2836,7 @@ function convertToPatient(qId){
   <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Se creará una ficha completa para <strong>${qa.ptName}</strong> y la cita quedará asociada a ella.</p>
   <div class="form-row"><div class="form-group"><label>Nombre completo *</label><input id="f_name" value="${qa.ptName}"></div><div class="form-group"><label>Cédula / ID</label><input id="f_ced"></div></div>
   <div class="form-row"><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date"></div><div class="form-group"><label>Teléfono</label><input id="f_phone" value="${qa.phone||''}"></div></div>
-  <div class="form-row"><div class="form-group"><label>Email</label><input id="f_email" type="email"></div><div class="form-group"><label>Fecha nacimiento</label><input id="f_birth" type="date"></div></div>
+  <div class="form-row"><div class="form-group"><label>Email</label><input id="f_email" type="email"></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Alergias</label><input id="f_al" placeholder="Penicilina, látex..."></div></div>
   <div class="form-row form-full"><div class="form-group"><label>Antecedentes médicos</label><textarea id="f_ant"></textarea></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="confirmConvert('${qId}')">Crear ficha y asociar cita</button></div>`);
@@ -1491,7 +3139,7 @@ function descargarInformeAnual(anio){
   ${arch.map(a=>`<tr><td>${a.label}</td><td style="text-align:right" class="green">$${a.totalIngresos.toFixed(2)}</td><td style="text-align:right" class="red">$${a.totalEgresos.toFixed(2)}</td><td style="text-align:right;font-weight:600;color:${a.utilidad>=0?'#10b981':'#ef4444'}">${a.utilidad>=0?'+':''}$${a.utilidad.toFixed(2)}</td><td style="text-align:right">${a.pacientesAtendidos}</td></tr>`).join('')}
   <tr class="grand"><td>TOTAL AÑO ${anio}</td><td style="text-align:right" class="green">$${totalInc.toFixed(2)}</td><td style="text-align:right" class="red">$${totalEg.toFixed(2)}</td><td style="text-align:right;font-weight:700;color:${totalInc-totalEg>=0?'#10b981':'#ef4444'}">${totalInc-totalEg>=0?'+':''}$${(totalInc-totalEg).toFixed(2)}</td><td></td></tr>
   </tbody></table>
-  <div class="footer">Informe generado por OdontoApp · ${clinicaNombre} · Año ${anio}</div></body></html>`;
+  <div class="footer">Informe generado por OdontoApp · ${clinicaNombre} · Año ${anio}</div></bo${'dy></html>'}`;
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a2=document.createElement('a');
@@ -1532,7 +3180,7 @@ function _generarInformeHTML(titulo,pagos,egresosD,totalInc,totalEg,utilidad,pac
   <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Proveedor</th><th style="text-align:right">Monto</th></tr></thead>
   <tbody>${egresosD.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(e=>`<tr><td>${fmtDate(e.fecha)}</td><td>${e.concepto}</td><td>${e.categoria}</td><td>${e.proveedor||'—'}</td><td style="text-align:right" class="red">$${e.monto.toFixed(2)}</td></tr>`).join('')}
   <tr class="total-row"><td colspan="4" style="text-align:right">TOTAL:</td><td style="text-align:right" class="red">$${totalEg.toFixed(2)}</td></tr></tbody></table>
-  <div class="footer">Informe generado por OdontoApp · ${clinicaNombre} · ${titulo}</div></body></html>`;
+ <div class="footer">Informe generado por OdontoApp · ${clinicaNombre} · ${titulo}</div></bo${'dy></html>'}`;
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1865,10 +3513,15 @@ function abrirOdoSnapshot(snapId){
 function imprimirOdoSnapshot(snapId){
   const snap=curPt.odoHistory.find(x=>x.id===snapId);
   if(!snap)return;
+
   const clinicaNombre=document.getElementById('logoText').textContent;
   const area=document.getElementById('odo-snap-print');
   if(!area)return;
+
   const w=safeOpen('','_blank','width=900,height=700');
+
+  const cierreBody='</bo'+'dy></html>';
+
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Odontograma — ${snap.label}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -1880,7 +3533,8 @@ function imprimirOdoSnapshot(snapId){
   <h2>${clinicaNombre} — Odontograma: ${snap.label}</h2>
   <div class="sub">Paciente: ${curPt.name} · ${fmtDate(snap.fecha)}${snap.hora?' · '+snap.hora:''}${snap.notas?' · '+snap.notas:''}</div>
   ${area.innerHTML}
-  </body></html>`);
+  ${cierreBody}`);
+
   w.document.close();
   setTimeout(()=>{w.print();},500);
 }
@@ -1955,14 +3609,14 @@ function renderPagos(){
   const p=curPt,txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0),deuda=Math.max(0,txT-paid);
   const pendFact=p.payments.filter(py=>py.factPendiente);
   return`
-  ${pendFact.length?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+  ${pendFact.length?`<div style="background:#f0e7d8;border:1px solid #dcc39c;border-radius:12px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
     <div style="font-size:24px">⚠️</div>
     <div style="flex:1">
-      <div style="font-size:13px;font-weight:700;color:#92400e">Tienes ${pendFact.length} pago${pendFact.length>1?'s':''} sin facturar en el SRI</div>
-      <div style="font-size:11px;color:#a16207;margin-top:2px">Total pendiente de facturar: <strong>$${pendFact.reduce((s,p)=>s+p.amount,0).toFixed(2)}</strong></div>
+      <div style="font-size:13px;font-weight:700;color:#6b4a2f">Tienes ${pendFact.length} pago${pendFact.length>1?'s':''} sin facturar en el SRI</div>
+      <div style="font-size:11px;color:#8a6a4a;margin-top:2px">Total pendiente de facturar: <strong>$${pendFact.reduce((s,p)=>s+p.amount,0).toFixed(2)}</strong></div>
     </div>
     <a href="https://facturadorsri.sri.gob.ec/portal-facturadorsri-internet/pages/comprobantes/factura/Factura.html" target="_blank"
-      style="padding:8px 14px;background:#f59e0b;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">
+      style="padding:8px 14px;background:#b98a4e;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">
       🌐 Ir al SRI
     </a>
   </div>`:''}
@@ -1978,16 +3632,16 @@ function renderPagos(){
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:6px">
             <div class="row-name">${py.concept}</div>
-            ${py.archivado&&py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`
+            ${py.archivado&&py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#f0e7d8;color:#6b4a2f;border-radius:10px;border:1px solid #dcc39c">⚠ Sin facturar</span>`
               :py.archivado?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#f1f5f9;color:#64748b;border-radius:10px;border:1px solid #e2e8f0">📦 Archivado</span>`
-              :py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:10px;border:1px solid #fcd34d">⚠ Sin facturar</span>`
+              :py.factPendiente?`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#f0e7d8;color:#6b4a2f;border-radius:10px;border:1px solid #dcc39c">⚠ Sin facturar</span>`
               :`<span style="font-size:9px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:10px">✓ Facturado</span>`}
           </div>
           <div class="row-meta">${fmtDate(py.date)} · ${py.type}</div>
         </div>
         <div class="pay-amount">+$${py.amount.toFixed(2)}</div>
         <button onclick="imprimirComprobante(${py.id})" title="Imprimir comprobante" style="padding:5px 8px;background:#dbeafe;color:#1e40af;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:4px">🖨️</button>
-        ${py.factPendiente?`<button onclick="marcarFacturada(${py.id})" title="Marcar como facturado" style="padding:5px 8px;background:#f59e0b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:4px">🧾 Facturar</button>`:!py.archivado?`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:4px">✓</button>`:''}
+        ${py.factPendiente?`<button onclick="marcarFacturada(${py.id})" title="Marcar como facturado" style="padding:5px 8px;background:#b98a4e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-left:4px">🧾 Facturar</button>`:!py.archivado?`<button onclick="marcarFacturada(${py.id})" title="Marcar como pendiente" style="padding:5px 8px;background:var(--bg);color:var(--text3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:10px;margin-left:4px">✓</button>`:''}
         <button class="del-btn" style="margin-left:4px" onclick="delPay(${py.id})">✕</button>
       </div>`).join(''):`<div style="font-size:13px;color:var(--text3)">Sin pagos registrados</div>`}
     <div class="total-bar${deuda>0?' debt':''}"><div class="total-lbl${deuda>0?' debt':''}">${deuda>0?'Deuda pendiente':'Al día ✓'}</div><div class="total-val${deuda>0?' debt':''}">$${deuda>0?deuda:paid}</div></div>
@@ -2157,12 +3811,11 @@ function imprimirComprobante(pagoId){
   </div>
 
   <div style="text-align:center;margin-top:12px;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px">
-    <span class="watermark">DOCUMENTO VÁLIDO SOLO CON FIRMA Y SELLO DEL PROFESIONAL</span><br>
-    Comprobante de Pago · Emitido por ${clinica} · ${fmtDate(today())} · Generado por OdontoApp
-  </div>
-
+<span class="watermark">DOCUMENTO VÁLIDO SOLO CON FIRMA Y SELLO DEL PROFESIONAL</span><br>
+Comprobante de Pago · Emitido por ${clinica} · ${fmtDate(today())} · Generado por OdontoApp
 </div>
-</body></html>`;
+</div>
+</bo${'dy></html>'}`;
 
   const w=safeOpen('','_blank','width=900,height=780');
   w.document.write(html);
@@ -2211,11 +3864,11 @@ function recordatorioFactura(pago){
     if(!pago) return;
   }
   openModal(`<div class="modal-title">🧾 Recordatorio de factura</div>
-  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
+  <div style="background:#f0e7d8;border:1px solid #dcc39c;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
     <div style="font-size:28px">⚠️</div>
     <div>
-      <div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:4px">¡No olvides emitir la factura en el SRI!</div>
-      <div style="font-size:12px;color:#a16207;line-height:1.6">Se registró un pago de <strong>$${pago.amount.toFixed(2)}</strong> de <strong>${curPt.name}</strong>. Recuerda emitir la factura electrónica en el portal del SRI.</div>
+      <div style="font-size:14px;font-weight:700;color:#6b4a2f;margin-bottom:4px">¡No olvides emitir la factura en el SRI!</div>
+      <div style="font-size:12px;color:#8a6a4a;line-height:1.6">Se registró un pago de <strong>$${pago.amount.toFixed(2)}</strong> de <strong>${curPt.name}</strong>. Recuerda emitir la factura electrónica en el portal del SRI.</div>
     </div>
   </div>
   <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:14px">
@@ -2475,9 +4128,9 @@ function renderConsentimientos(){
         </div>`:''}
       </div>`).join('')}
   </div>
-  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+  <div style="background:#f0e7d8;border:1px solid #dcc39c;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
     <div style="font-size:18px">⚖️</div>
-    <div style="font-size:12px;color:#92400e">Los consentimientos informados son un requisito legal y ético. Deben obtenerse antes de cada procedimiento. Se recomienda imprimir, firmar físicamente y archivar el documento original.</div>
+    <div style="font-size:12px;color:#6b4a2f">Los consentimientos informados son un requisito legal y ético. Deben obtenerse antes de cada procedimiento. Se recomienda imprimir, firmar físicamente y archivar el documento original.</div>
   </div>`;
 }
 
@@ -2592,7 +4245,7 @@ function toggleDarkMode(){
 
 // ═══ CONFIGURACIÓN (página completa) ═══
 function renderConfiguracion(){
-  const COLS=['#0ea5e9','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4','#0f172a'];
+  const COLS=['#2f9d94','#025f67','#063154','#10b981','#b98a4e','#ef4444','#8b5cf6','#0f172a'];
   const dark=document.body.classList.contains('dark-mode');
   return`
   <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
@@ -2860,7 +4513,7 @@ function applyLogoImg(src){
 }
 
 function openLogoEdit(){
-  const COLS=['#0ea5e9','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4','#0f172a'];
+  const COLS=['#2f9d94','#025f67','#063154','#10b981','#b98a4e','#ef4444','#8b5cf6','#0f172a'];
   openModal(`<div class="modal-title">⚙️ Configuración</div>
 
   <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">🏥 Datos de la clínica</div>
@@ -3010,16 +4663,16 @@ function factoryReset(){
   // Reset state
   patients=[];egresos=[];facturas=[];quickAppts=[];
   nextId=1;nextEgId=1;nextFactId=1;nextRecetaId=1;
-  logoColor='#0ea5e9';logoImg=null;
+  logoColor='#2f9d94';logoImg=null;
   clinicaRUC='';clinicaDireccion='';clinicaTelefono='';
   MEDICAMENTOS_COMUNES=['Amoxicilina 500mg','Amoxicilina + Ácido Clavulánico 875/125mg','Azitromicina 500mg','Clindamicina 300mg','Metronidazol 500mg','Ibuprofeno 400mg','Ibuprofeno 600mg','Paracetamol 500mg','Naproxeno 500mg','Ketorolaco 10mg','Diclofenaco 50mg','Dexametasona 4mg','Prednisona 5mg','Cloruro de Sodio 0.9% (Suero Fisiológico)','Clorhexidina 0.12% enjuague bucal','Gel de Clorhexidina 1%','Clorfenamina 4mg','Loratadina 10mg','Omeprazol 20mg'];
   // Reset logo UI
   document.getElementById('logoText').textContent='OdontoApp';
   document.getElementById('logoProfesional').textContent='Dr. Profesional';
   const icon=document.getElementById('logoIcon');
-  icon.style.background='#0ea5e9';
+  icon.style.background='#2f9d94';
   icon.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 2C9.2 2 7 4.2 7 7c0 2 1 4 2.2 5.2L10.5 21c.2.8.8 1 1.5 1s1.3-.2 1.5-1l1.3-8.8C16 11 17 9 17 7c0-2.8-2.2-5-5-5z"/></svg>`;
-  applyColor('#0ea5e9');
+  applyColor('#2f9d94');
   // Seed demo data and restart
   seedDemo();
   closeModal();
@@ -3292,6 +4945,25 @@ let MEDICAMENTOS_COMUNES=[
   'Clorhexidina 0.12% enjuague bucal','Gel de Clorhexidina 1%','Clorfenamina 4mg',
   'Loratadina 10mg','Omeprazol 20mg'
 ];
+// ═══ CATÁLOGO CON POSOLOGÍA ESTÁNDAR (Receta en 1 toque) ═══
+const CATALOGO_MEDS=[
+{nombre:'Amoxicilina 500mg',forma:'Cápsula',via:'Oral',dosis:'1 cápsula',frecuencia:'Cada 8 horas',duracion:'7 días',cantidad:21,indicacion:'Tomar con alimentos'},
+{nombre:'Amoxicilina + Ácido Clavulánico 875/125mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 12 horas',duracion:'7 días',cantidad:14,indicacion:'Tomar con alimentos'},
+{nombre:'Ibuprofeno 400mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 8 horas',duracion:'5 días',cantidad:15,indicacion:'Tomar después de los alimentos'},
+{nombre:'Ibuprofeno 600mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 8 horas',duracion:'5 días',cantidad:15,indicacion:'Tomar después de los alimentos'},
+{nombre:'Paracetamol 500mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 8 horas',duracion:'5 días',cantidad:15},
+{nombre:'Naproxeno 550mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 12 horas',duracion:'5 días',cantidad:10},
+{nombre:'Ketorolaco 10mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 6 horas',duracion:'3 días',cantidad:12,indicacion:'Máximo 3 días por riesgo gástrico'},
+{nombre:'Dexametasona 4mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 24 horas',duracion:'3 días',cantidad:3,indicacion:'Por la mañana con alimentos'},
+{nombre:'Metronidazol 500mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 8 horas',duracion:'7 días',cantidad:21,indicacion:'No consumir alcohol'},
+{nombre:'Clindamicina 300mg',forma:'Cápsula',via:'Oral',dosis:'1 cápsula',frecuencia:'Cada 8 horas',duracion:'7 días',cantidad:21},
+{nombre:'Azitromicina 500mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 24 horas',duracion:'3 días',cantidad:3},
+{nombre:'Clorhexidina 0.12% enjuague',forma:'Enjuague bucal',via:'Tópica',dosis:'15 ml',frecuencia:'2 veces al día',duracion:'7 días',cantidad:1,indicacion:'Enjuagar 1 min, no ingerir'},
+{nombre:'Nistatina suspensión 100.000 UI/ml',forma:'Suspensión oral',via:'Oral',dosis:'5 ml',frecuencia:'4 veces al día',duracion:'7 días',cantidad:1,indicacion:'Retener en boca antes de tragar'},
+{nombre:'Omeprazol 20mg',forma:'Cápsula',via:'Oral',dosis:'1 cápsula',frecuencia:'Cada 24 horas',duracion:'7 días',cantidad:7,indicacion:'En ayunas'},
+{nombre:'Diclofenaco 50mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 12 horas',duracion:'5 días',cantidad:10},
+{nombre:'Loratadina 10mg',forma:'Tableta',via:'Oral',dosis:'1 tableta',frecuencia:'Cada 24 horas',duracion:'7 días',cantidad:7}
+];
 
 function saveMeds(){
   localStorage.setItem('oa3_meds',JSON.stringify(MEDICAMENTOS_COMUNES));
@@ -3358,12 +5030,12 @@ function openNuevaReceta(){
     <button onclick="addDiagItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar diagnóstico</button>
   </div>
   <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Rp/ Medicamentos</div>
-      <button onclick="addMedItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar medicamento</button>
-    </div>
-    <div id="med-items"></div>
-  </div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Rp/ Medicamentos</div>
+<button onclick="addMedItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar medicamento</button>
+</div>
+<div id="med-items"></div>
+</div>
   <div class="form-group" style="margin-bottom:10px"><label>Indicaciones para el paciente</label>
     <textarea id="f_rind" style="min-height:60px" placeholder="Tomar con alimentos, completar el tratamiento, no mezclar con alcohol..."></textarea></div>
   <div class="modal-footer">
@@ -3388,42 +5060,43 @@ function numToLetras(n){
   return String(n);
 }
 
-let medItemCount=0;
-function addMedItem(){
-  medItemCount++;
-  const id=medItemCount;
-  const dl=`<datalist id="med-dl-${id}">${MEDICAMENTOS_COMUNES.map(m=>`<option value="${m}">`).join('')}</datalist>`;
-  const div=document.createElement('div');
-  div.id=`med-item-${id}`;
-  div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px';
-  div.innerHTML=dl+`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--accent)">Medicamento ${id}</div>
-      ${id>1?`<button onclick="document.getElementById('med-item-${id}').remove()" style="padding:2px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fee2e2;color:#991b1b;cursor:pointer;font-size:11px">Eliminar</button>`:''}
-    </div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="form-group" style="margin:0"><label>Nombre genérico DCI (sin abreviaturas) *</label>
-        <input list="med-dl-${id}" id="mn_${id}" placeholder="Ej: Amoxicilina trihidrato" style="font-weight:600"></div>
-      <div class="form-group" style="margin:0"><label>Forma farmacéutica</label>
-        <select id="mff_${id}"><option>Tableta</option><option>Cápsula</option><option>Jarabe</option><option>Suspensión oral</option><option>Solución inyectable</option><option>Gel tópico</option><option>Crema</option><option>Gotas</option><option>Enjuague bucal</option><option>Comprimido</option></select></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="form-group" style="margin:0"><label>Concentración</label><input id="mc_${id}" placeholder="500mg, 250mg/5ml"></div>
-      <div class="form-group" style="margin:0"><label>Vía de administración</label>
-        <select id="mv_${id}"><option>Oral</option><option>Tópica</option><option>Sublingual</option><option>Inyectable IM</option><option>Inyectable IV</option><option>Ótica</option><option>Rectal</option></select></div>
-      <div class="form-group" style="margin:0"><label>Cantidad (números)</label>
-        <input id="mqn_${id}" type="number" min="1" placeholder="10" oninput="document.getElementById('mql_${id}').value=numToLetras(this.value)"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="form-group" style="margin:0"><label>Cantidad en letras (auto)</label>
-        <input id="mql_${id}" placeholder="Automático" style="text-transform:uppercase;font-size:11px"></div>
-      <div class="form-group" style="margin:0"><label>Dosis por toma</label><input id="md_${id}" placeholder="1 tableta, 5ml"></div>
-      <div class="form-group" style="margin:0"><label>Frecuencia</label>
-        <select id="mf_${id}"><option>Cada 8 horas</option><option>Cada 6 horas</option><option>Cada 12 horas</option><option>Cada 24 horas</option><option>2 veces al día</option><option>3 veces al día</option><option>Según dolor</option><option>En caso necesario</option></select></div>
-    </div>
-    <div class="form-group" style="margin:0"><label>Duración del tratamiento</label>
-      <input id="mdu_${id}" placeholder="5 días, 7 días, hasta terminar"></div>`;
-  document.getElementById('med-items').appendChild(div);
+let medItemCount=0;let factItemCount=0;
+function addMedItem(catIdx){
+medItemCount++;
+const id=medItemCount;
+const c=(typeof catIdx==='number')?CATALOGO_MEDS[catIdx]:null;
+const dl=`<datalist id="med-dl-${id}">${MEDICAMENTOS_COMUNES.map(m=>`<option value="${m}">`).join('')}</datalist>`;
+const div=document.createElement('div');
+div.id=`med-item-${id}`;
+div.style.cssText='background:var(--card);border:1px solid '+(c?'var(--accent)':'var(--border)')+';border-radius:10px;padding:12px;margin-bottom:10px';
+div.innerHTML=dl+`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<div style="font-size:12px;font-weight:700;color:var(--accent)">Medicamento ${id}${c?' · ⚡ posología auto':''}</div>
+<button onclick="document.getElementById('med-item-${id}').remove()" style="padding:2px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fee2e2;color:#991b1b;cursor:pointer;font-size:11px">Eliminar</button>
+</div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px">
+<div class="form-group" style="margin:0"><label>Nombre genérico DCI (sin abreviaturas) *</label>
+<input list="med-dl-${id}" id="mn_${id}" value="${c?c.nombre:''}" style="font-weight:600"></div>
+<div class="form-group" style="margin:0"><label>Forma farmacéutica</label>
+<select id="mff_${id}">${['Tableta','Cápsula','Jarabe','Suspensión oral','Solución inyectable','Gel tópico','Crema','Gotas','Enjuague bucal','Comprimido'].map(f=>`<option${c&&c.forma===f?' selected':''}>${f}</option>`).join('')}</select></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+<div class="form-group" style="margin:0"><label>Vía de administración</label>
+<select id="mv_${id}">${['Oral','Tópica','Sublingual','Inyectable IM','Inyectable IV','Ótica','Rectal'].map(f=>`<option${c&&c.via===f?' selected':''}>${f}</option>`).join('')}</select></div>
+<div class="form-group" style="margin:0"><label>Cantidad (números)</label>
+<input id="mqn_${id}" type="number" min="1" value="${c?c.cantidad:''}" oninput="document.getElementById('mql_${id}').value=numToLetras(this.value)"></div>
+<div class="form-group" style="margin:0"><label>Cantidad en letras (auto)</label>
+<input id="mql_${id}" value="${c?numToLetras(c.cantidad):''}" style="text-transform:uppercase;font-size:11px"></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+<div class="form-group" style="margin:0"><label>Dosis por toma</label><input id="md_${id}" value="${c?c.dosis:''}"></div>
+<div class="form-group" style="margin:0"><label>Frecuencia</label>
+<select id="mf_${id}">${['Cada 6 horas','Cada 8 horas','Cada 12 horas','Cada 24 horas','2 veces al día','3 veces al día','4 veces al día','Según dolor','En caso necesario'].map(f=>`<option${c&&c.frecuencia===f?' selected':''}>${f}</option>`).join('')}</select></div>
+</div>
+<div class="form-group" style="margin:0"><label>Duración del tratamiento</label>
+<input id="mdu_${id}" value="${c?c.duracion:''}"></div>
+${c&&c.indicacion?`<div style="margin-top:8px;font-size:11px;color:var(--text2);background:var(--bg);border-radius:6px;padding:6px 8px">💡 ${c.indicacion}</div>`:''}`;
+document.getElementById('med-items').appendChild(div);
 }
 
 function saveReceta(){
@@ -3637,7 +5310,7 @@ ${r.indicaciones?`<div class="imp-box"><strong>⚠️ IMPORTANTE:</strong> ${r.i
 </div>
 </div>
 <script>window.onload=function(){window.print()}<\/script>
-</body></html>`;
+${'</bo'+'dy></html>'}`;
 const w=safeOpen('','_blank','width=900,height=950');
 if(!w)return;
 w.document.write(html);
@@ -3666,9 +5339,9 @@ function exportarDatos(){
     totalPacientes:patients.length,
     totalFacturas:facturas.length,
     totalEgresos:egresos.length,
-    patients,egresos,facturas,
-    nextId,nextEgId,nextFactId,nextRecetaId
-  };
+    patients,egresos,facturas,servicios,archivosContables,quickAppts,
+nextId,nextEgId,nextFactId,nextRecetaId,nextPresupId
+};
   // Strip base64 images to reduce file size (optional: keep them)
   const backupStr=JSON.stringify(backup,null,2);
   const blob=new Blob([backupStr],{type:'application/json'});
@@ -3751,7 +5424,11 @@ function importarDatos(){
         nextId=data.nextId||patients.length+1;
         nextEgId=data.nextEgId||egresos.length+1;
         nextFactId=data.nextFactId||facturas.length+1;
-        nextRecetaId=data.nextRecetaId||1;
+        nextRecetaId=data.nextRecetaId||1;nextPresupId=data.nextPresupId||1;if(data.servicios)servicios=data.servicios;if(data.archivosContables)archivosContables=data.archivosContables;if(data.quickAppts)quickAppts=data.quickAppts;
+nextPresupId=data.nextPresupId||1;
+if(data.servicios)servicios=data.servicios;
+if(data.archivosContables)archivosContables=data.archivosContables;
+if(data.quickAppts)quickAppts=data.quickAppts;
         // Fix missing arrays
         patients.forEach(pt=>{
           ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
@@ -3905,7 +5582,7 @@ function openSbPanel(){
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Descarga la última versión guardada</div>
     </div>
   </div>
-  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:#92400e">
+  <div style="background:#f0e7d8;border:1px solid #dcc39c;border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:#6b4a2f">
     <b>🔄 Auto-sync activado:</b> Cada cambio que hagas se sincroniza automáticamente a la nube en 5 segundos. Para usar en otro dispositivo, abre la app, conéctate con el mismo ID y haz "Cargar desde nube".
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center">
@@ -3928,9 +5605,9 @@ function buildPayload(){
         ruc:clinicaRUC, direccion:clinicaDireccion, telefono:clinicaTelefono,
         logoColor, logoImg
       },
-      patients, egresos, facturas,
-      nextId, nextEgId, nextFactId, nextRecetaId,
-      meds: MEDICAMENTOS_COMUNES
+      patients, egresos, facturas, servicios, archivosContables, quickAppts,
+nextId, nextEgId, nextFactId, nextRecetaId, nextPresupId,
+servicios, archivosContables, quickAppts, nextPresupId, meds: MEDICAMENTOS_COMUNES
     },
     updated_at: new Date().toISOString()
   };
@@ -3970,8 +5647,8 @@ async function sbLoadNow(){
     // Restore
     patients=d.patients||[]; egresos=d.egresos||[]; facturas=d.facturas||[];
     nextId=d.nextId||patients.length+1; nextEgId=d.nextEgId||egresos.length+1;
-    nextFactId=d.nextFactId||facturas.length+1; nextRecetaId=d.nextRecetaId||1;
-    if(d.meds?.length){ MEDICAMENTOS_COMUNES=d.meds; saveMeds(); }
+nextFactId=d.nextFactId||facturas.length+1; nextRecetaId=d.nextRecetaId||1;nextPresupId=d.nextPresupId||1;if(d.servicios)servicios=d.servicios;if(d.archivosContables)archivosContables=d.archivosContables;if(d.quickAppts)quickAppts=d.quickAppts; nextPresupId=d.nextPresupId||1;
+if(d.servicios)servicios=d.servicios; if(d.archivosContables)archivosContables=d.archivosContables; if(d.quickAppts)quickAppts=d.quickAppts;    if(d.meds?.length){ MEDICAMENTOS_COMUNES=d.meds; saveMeds(); }
     patients.forEach(pt=>{
       ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
       ['treatments','payments','appointments','diary','images','consents','recetas','presupuestos'].forEach(k=>{if(!pt[k])pt[k]=[];});
@@ -3980,7 +5657,7 @@ async function sbLoadNow(){
       document.getElementById('logoText').textContent=d.clinica.nombre||'OdontoApp';
       document.getElementById('logoProfesional').textContent=d.clinica.profesional||'Dr. Profesional';
       clinicaRUC=d.clinica.ruc||''; clinicaDireccion=d.clinica.direccion||''; clinicaTelefono=d.clinica.telefono||'';
-      logoColor=d.clinica.logoColor||'#0ea5e9';
+      logoColor=d.clinica.logoColor||'#2f9d94';
       if(d.clinica.logoImg){logoImg=d.clinica.logoImg; applyLogoImg(logoImg);}
       applyColor(logoColor);
     }
@@ -4229,12 +5906,23 @@ function verPresupuesto(id){
 }
 
 function imprimirPresupuesto(){
-  const area=document.getElementById('presup-print-area');if(!area)return;
+  const area=document.getElementById('presup-print-area');
+  if(!area)return;
+
   const w=safeOpen('','_blank','width=820,height=900');
+
+  const cierreBody='</bo'+'dy></html>';
+
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Presupuesto Dental</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:28px;color:#0f172a}@media print{body{padding:12px}}</style>
-  </head><body>${area.innerHTML}</body></html>`);
-  w.document.close();setTimeout(()=>w.print(),400);
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;padding:28px;color:#0f172a}
+    @media print{body{padding:12px}}
+  </style>
+  </head><body>${area.innerHTML}${cierreBody}`);
+
+  w.document.close();
+  setTimeout(()=>w.print(),400);
 }
 
 function aprobarPresupuesto(id){
@@ -4295,7 +5983,7 @@ function runSearch(q){
     // Treatments
     (p.treatments||[]).forEach(t=>{
       if(t.name.toLowerCase().includes(ql)){
-        results.push({type:'tx',icon:'🦷',iconBg:'#fef3c7',label:t.name,sub:`${p.name} · ${fmtDate(t.date)} · $${t.cost}`,action:()=>{selectPt(p.id);setTimeout(()=>switchTab('tratamientos',document.querySelector('.tab:nth-child(4)')),100);}});
+        results.push({type:'tx',icon:'🦷',iconBg:'#f0e7d8',label:t.name,sub:`${p.name} · ${fmtDate(t.date)} · $${t.cost}`,action:()=>{selectPt(p.id);setTimeout(()=>switchTab('tratamientos',document.querySelector('.tab:nth-child(4)')),100);}});
       }
     });
     // Appointments
@@ -4315,7 +6003,7 @@ function runSearch(q){
   // Quick appointments
   (quickAppts||[]).forEach(a=>{
     if(a.ptName?.toLowerCase().includes(ql)||a.reason?.toLowerCase().includes(ql)){
-      results.push({type:'appt',icon:'📅',iconBg:'#fef3c7',label:a.ptName,sub:`Cita rápida · ${fmtDate(a.date)} ${a.time} · ${a.reason||''}`,action:()=>showPage('agenda')});
+      results.push({type:'appt',icon:'📅',iconBg:'#f0e7d8',label:a.ptName,sub:`Cita rápida · ${fmtDate(a.date)} ${a.time} · ${a.reason||''}`,action:()=>showPage('agenda')});
     }
   });
 
@@ -4672,7 +6360,7 @@ function crearTxDesdeOdonto(tooth,odoId){
 function sugerirTxDesdeCaries(tooth,zone){
   const svc=servicios.find(s=>/obturaci|resina/i.test(s.nombre));
   openModal(`<div class="modal-title">💡 Tratamiento sugerido</div>
-  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#92400e">
+  <div style="background:#f0e7d8;border:1px solid #dcc39c;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#6b4a2f">
   Se marcó <strong>caries</strong> en el diente <strong>${tooth}</strong> (${zoneNamesFor(tooth)[zone]}). ¿Registrar el tratamiento pendiente correspondiente?
   </div>
   <div class="form-row form-full"><div class="form-group"><label>Tratamiento *</label><input id="f_stn" value="${svc?svc.nombre:'Obturación resina'}"></div></div>
@@ -4794,66 +6482,64 @@ async function pintarMedidor(){
   el.innerHTML=html;
 }
 
-// ═══ MEDIDOR DE ALMACENAMIENTO (local + Supabase) ═══
-async function medirAlmacenamiento(){
-  const keys=['oa3_pts','oa3_eg','oa3_fact','oa3_nid','oa3_neg','oa3_nfact','oa3_nreceta','oa3_npresup','oa3_logo','oa3_arch','oa3_svc','oa3_meds','oa3_qa','oa3_sb','oa3_dark','oa3_tz','oa3_wamsg','oa3_sb_lastsync'];
-  let lsBytes=0;
-  keys.forEach(k=>{const s=localStorage.getItem(k);if(s)lsBytes+=new Blob([s]).size;});
-  let idbBytes=0,idbCount=0;
-  try{
-    const db=await openImgDB();
-    await new Promise(res=>{
-      const cur=db.transaction('images','readonly').objectStore('images').openCursor();
-      cur.onsuccess=e=>{
-        const c=e.target.result;
-        if(c){if(c.value&&c.value.size)idbBytes+=c.value.size;idbCount++;c.continue();}
-        else res();
-      };
-      cur.onerror=()=>res();
-    });
-  }catch(e){}
-  return{lsBytes,idbBytes,idbCount};
+
+// ═══ CABECERA DE VENTANA DEL PACIENTE (solo estética) ═══
+function esNegativo(txt){
+if(!txt)return true;
+const t=String(txt).trim().toLowerCase().replace(/[.\s]+$/,'');
+if(!t)return true;
+const negs=['no','no refiere','no refiere nada','nada','ninguna','ninguna conocida','ninguno','niega','sin alergias','sin alergias conocidas','sin antecedentes','sin antecedentes conocidos','sin','negativo','no conocido','no padece','sano','sana'];
+return negs.some(n=>t===n||t.startsWith(n+' '));
 }
-async function medirSupabase(){
-  if(!sbClient||!sbClinicaId)return null;
-  let payloadBytes=0;
-  try{payloadBytes=new Blob([JSON.stringify(buildPayload())]).size;}catch(e){}
-  let dbBytes=null;
-  try{
-    const {data,error}=await sbClient.rpc('clinica_db_size');
-    if(!error&&typeof data==='number')dbBytes=data;
-  }catch(e){}
-  return{payloadBytes,dbBytes};
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+// ═══ CABECERA DEL PACIENTE (alertas con hover) ═══
+function esNegativo(txt){
+if(!txt)return true;
+const t=String(txt).trim().toLowerCase().replace(/[.\s]+$/,'');
+if(!t)return true;
+const negs=['no','no refiere','no refiere nada','nada','ninguna','ninguno','niega','sin alergias','sin alergias conocidas','sin antecedentes','sin antecedentes conocidos','sin','negativo','no conocido','no padece','sano','sana'];
+return negs.some(n=>t===n||t.startsWith(n+' '));
 }
-async function pintarMedidor(){
-  const el=document.getElementById('storage-meter');
-  if(!el)return;
-  const m=await medirAlmacenamiento();
-  const LS_MAX=5*1024*1024;
-  const pct=Math.min(100,Math.round(m.lsBytes/LS_MAX*100));
-  const col=pct<60?'var(--green)':pct<85?'var(--amber)':'var(--red)';
-  let html=`
-  <div style="margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span>📱 Datos del consultorio (localStorage)</span><b style="color:${col}">${fmtBytes(m.lsBytes)} / ~5 MB · ${pct}%</b></div>
-    <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width .4s"></div></div>
-    <div style="font-size:10px;color:var(--text3);margin-top:4px">${pct>=85?'🔴 Cerca del límite: haz un backup y libera espacio (imágenes y pacientes antiguos).':pct>=60?'🟡 Vigila el crecimiento: las miniaturas de imágenes son lo que más pesa.':'🟢 Margen saludable.'}</div>
-  </div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:12px"><span>🖼️ Radiografías/fotos originales (este dispositivo)</span><b>${fmtBytes(m.idbBytes)}${m.idbCount?' · '+m.idbCount+' archivos':''}</b></div>`;
-  if(sbClient&&sbClinicaId){
-    const s=await medirSupabase();
-    if(s){
-      const sbPct=s.dbBytes!==null?Math.max(1,Math.min(100,Math.round(s.dbBytes/(500*1024*1024)*100))):0;
-      html+=`<div style="border-top:1px solid var(--border);padding-top:10px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px"><span>☁️ Peso de cada sincronización a Supabase</span><b>${fmtBytes(s.payloadBytes)}</b></div>
-      ${s.dbBytes!==null?`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span>☁️ Base de datos en la nube (plan gratis: 500 MB)</span><b>${fmtBytes(s.dbBytes)} · ${sbPct}%</b></div>
-      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${sbPct}%;background:var(--accent);border-radius:4px"></div></div>`
-      :`<div style="font-size:10px;color:var(--text3)">💡 Para ver el total de la base de datos, ejecuta una vez el SQL opcional del medidor en tu Supabase.</div>`}
-      </div>`;
-    }
-  }else{
-    html+=`<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px">☁️ Supabase sin conectar: tu única copia está en este dispositivo.</div>`;
-  }
-  el.innerHTML=html;
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showPtAlertTip(ev,key){
+const d=window._ptAlerts||{};
+const txt=key==='alergia'?d.alergia:d.antec;
+if(!txt||esNegativo(txt))return;
+let tip=document.getElementById('ptAlertTip');
+if(!tip){tip=document.createElement('div');tip.id='ptAlertTip';document.body.appendChild(tip);}
+tip.innerHTML=key==='alergia'?`<strong>⚠️ ALERGIA:</strong> ${escHtml(txt)}`:`<strong>🩺 ANTECEDENTES:</strong> ${escHtml(txt)}`;
+tip.style.display='block';
+const r=ev.currentTarget.getBoundingClientRect();
+tip.style.left=Math.max(8,Math.min(r.left,window.innerWidth-328))+'px';
+tip.style.top=(r.bottom+10)+'px';
+}
+function hidePtAlertTip(){const tip=document.getElementById('ptAlertTip');if(tip)tip.style.display='none';}
+function renderPtHeader(){
+const p=curPt;if(!p)return;
+document.body.classList.add('pt-open');
+const el=document.getElementById('ptWinHeader');if(!el)return;
+window._ptAlerts={alergia:p.alergias||'',antec:p.antecedentes||''};
+const btns=[];
+if(!esNegativo(p.alergias))btns.push(`<button class="ptw-alert-btn red" onmouseenter="showPtAlertTip(event,'alergia')" onmouseleave="hidePtAlertTip()">⚠️ Alergia</button>`);
+if(!esNegativo(p.antecedentes))btns.push(`<button class="ptw-alert-btn amber" onmouseenter="showPtAlertTip(event,'antec')" onmouseleave="hidePtAlertTip()">🩺 Antecedentes</button>`);
+el.innerHTML=`
+<div class="ptw-card">
+<div class="ptw-info">
+<div class="ptw-av">${initials(p.name)}</div>
+<div style="min-width:0">
+<div class="ptw-name">${p.name}</div>
+<div class="ptw-sub">🪪 ${p.cedula||'—'} · 📞 ${p.phone||'—'} · 🎂 ${calcAge(p.birthdate)} años</div>
+</div>
+${btns.length?`<div class="ptw-alerts-inline">${btns.join('')}</div>`:''}
+</div>
+<div class="ptw-actions">
+<button class="ptw-btn" title="Editar ficha" onclick="editPt()">✏️</button>
+<button class="ptw-btn" title="Nueva cita" onclick="openAddAppt()">📅</button>
+<button class="ptw-btn" title="Registrar pago" onclick="openAddPay()">💳</button>
+<button class="ptw-btn" title="Nueva receta" onclick="openNuevaReceta()">💊</button>
+<button class="ptw-btn" title="Cerrar ficha" onclick="showPage('dashboard')">✕</button>
+</div>
+</div>`;
 }
 
 // ═══ INIT ═══
