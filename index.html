@@ -374,6 +374,22 @@ close:function(){}
 // ═══ ODONTOGRAMA ═══
 const ODO_S=50,ODO_M=3,ODO_ZONES=['top','right','bottom','left','center'];
 const ZONE_NAMES={top:'Vestibular',right:'Distal',bottom:'Palatino/Lingual',left:'Mesial',center:'Oclusal'};
+// Orientación anatómica correcta por cuadrante (según diagrama oficial):
+// Arcada superior: exterior(arriba)=Vestibular · interior(abajo)=Palatino/Lingual
+// Arcada inferior: interior(arriba)=Palatino/Lingual · exterior(abajo)=Vestibular
+// Hacia la línea media=Mesial · se aleja de la línea media=Distal
+function zoneNamesFor(num){
+  const q=Math.floor(num/10);
+  const superior=(q===1||q===2||q===5||q===6);
+  const izq=(q===1||q===4||q===5||q===8); // cuadrantes dibujados a la IZQUIERDA de la línea media
+  return{
+    top:superior?'Vestibular':'Palatino/Lingual',
+    bottom:superior?'Palatino/Lingual':'Vestibular',
+    left:izq?'Distal':'Mesial',
+    right:izq?'Mesial':'Distal',
+    center:'Oclusal'
+  };
+}
 const ODO_GROUPS=[
   {label:'Permanente Superior',teeth:[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]},
   {label:'Temporal Superior',teeth:[55,54,53,52,51,61,62,63,64,65]},
@@ -1648,7 +1664,7 @@ function renderOdontograma(){
 
 function odoClickZone(e,tooth,zone){
   e.stopPropagation();selOdoTooth=tooth;selOdoZone=zone;
-  document.getElementById('tpTitle').textContent=`Diente ${tooth} — ${ZONE_NAMES[zone]}`;
+  document.getElementById('tpTitle').textContent=`Diente ${tooth} — ${zoneNamesFor(tooth)[zone]}`;
   const curS=curPt.surfData[tooth+'_'+zone],curW=curPt.wholeData[tooth];
   document.getElementById('tpOpts').innerHTML=`
     <div class="tp-section">Por superficie</div>
@@ -1680,8 +1696,23 @@ function odoClickZone(e,tooth,zone){
   popup.style.left=left+'px';
   popup.style.top=top+'px';
 }
-function odoSetSurf(id){delete curPt.wholeData[selOdoTooth];curPt.surfData[selOdoTooth+'_'+selOdoZone]===id?delete curPt.surfData[selOdoTooth+'_'+selOdoZone]:curPt.surfData[selOdoTooth+'_'+selOdoZone]=id;save();closeTP();renderTab();}
-function odoSetWhole(id){ODO_ZONES.forEach(z=>delete curPt.surfData[selOdoTooth+'_'+z]);curPt.wholeData[selOdoTooth]===id?delete curPt.wholeData[selOdoTooth]:curPt.wholeData[selOdoTooth]=id;save();closeTP();renderTab();}
+function odoSetSurf(id){
+  const tooth=selOdoTooth,zone=selOdoZone;
+  delete curPt.wholeData[tooth];
+  const key=tooth+'_'+zone;
+  const quitando=curPt.surfData[key]===id;
+  if(quitando)delete curPt.surfData[key];else curPt.surfData[key]=id;
+  save();closeTP();renderTab();
+  if(!quitando&&id==='caries')setTimeout(()=>sugerirTxDesdeCaries(tooth,zone),250);
+}
+function odoSetWhole(id){
+  const tooth=selOdoTooth;
+  ODO_ZONES.forEach(z=>delete curPt.surfData[tooth+'_'+z]);
+  const quitando=curPt.wholeData[tooth]===id;
+  if(quitando)delete curPt.wholeData[tooth];else curPt.wholeData[tooth]=id;
+  save();closeTP();renderTab();
+  if(!quitando&&typeof ODO_TX_MAP!=='undefined'&&ODO_TX_MAP[id])setTimeout(()=>sugerirTxDesdeOdonto(tooth,id),250);
+}
 function clearTooth(){ODO_ZONES.forEach(z=>delete curPt.surfData[selOdoTooth+'_'+z]);delete curPt.wholeData[selOdoTooth];save();closeTP();renderTab();}
 function closeTP(){document.getElementById('toothPopup').classList.remove('show')}
 
@@ -1815,30 +1846,51 @@ function imprimirOdoSnapshot(snapId){
 function renderTratamientos(){
   const p=curPt,pend=p.treatments.filter(t=>t.status==='pendiente'),done=p.treatments.filter(t=>t.status==='realizado');
   return`<div class="card">
-    <div class="action-row"><div class="card-title" style="margin:0">Pendientes</div><button class="btn-primary" onclick="openAddTx()">+ Agregar</button></div>
-    ${pend.length?pend.map(t=>`<div class="row-item"><div class="row-dot" style="background:var(--amber)"></div><div style="flex:1"><div class="row-name">${t.name}</div><div class="row-meta">Diente ${t.tooth} · ${fmtDate(t.date)}</div></div><div class="row-price">$${t.cost}</div><button class="done-btn" onclick="markDone(${t.id})">✓ Realizado</button><button class="del-btn" style="margin-left:6px" onclick="delTx(${t.id})">✕</button></div>`).join(''):`<div style="font-size:13px;color:var(--text3);padding:8px 0">Sin tratamientos pendientes</div>`}
+  <div class="action-row"><div class="card-title" style="margin:0">Pendientes</div><button class="btn-primary" onclick="openAddTx()">+ Agregar</button></div>
+  ${pend.length?pend.map(t=>`<div class="row-item"><div class="row-dot" style="background:var(--amber)"></div><div style="flex:1"><div class="row-name">${t.name}${badgeOdo(t)}</div><div class="row-meta">Diente ${t.tooth} · ${fmtDate(t.date)}${superficiesTx(t)}</div></div><div class="row-price">$${t.cost}</div><button class="done-btn" onclick="markDone(${t.id})">✓ Realizado</button><button class="del-btn" style="margin-left:6px" onclick="delTx(${t.id})">✕</button></div>`).join(''):`<div style="font-size:13px;color:var(--text3);padding:8px 0">Sin tratamientos pendientes</div>`}
   </div>
   <div class="card"><div class="card-title">Realizados</div>
-    ${done.length?done.map(t=>`<div class="row-item"><div class="row-dot" style="background:var(--green)"></div><div style="flex:1"><div class="row-name">${t.name}</div><div class="row-meta">Diente ${t.tooth} · ${fmtDate(t.date)}</div></div><div class="row-price">$${t.cost}</div><span class="badge badge-green">Realizado</span><button class="del-btn" style="margin-left:8px" onclick="delTx(${t.id})">✕</button></div>`).join(''):`<div style="font-size:13px;color:var(--text3);padding:8px 0">Sin tratamientos registrados</div>`}
+  ${done.length?done.map(t=>`<div class="row-item"><div class="row-dot" style="background:var(--green)"></div><div style="flex:1"><div class="row-name">${t.name}${badgeOdo(t)}</div><div class="row-meta">Diente ${t.tooth} · ${fmtDate(t.date)}${superficiesTx(t)}</div></div><div class="row-price">$${t.cost}</div><span class="badge badge-green">Realizado</span><button class="del-btn" style="margin-left:8px" onclick="delTx(${t.id})">✕</button></div>`).join(''):`<div style="font-size:13px;color:var(--text3);padding:8px 0">Sin tratamientos registrados</div>`}
   </div>`;
 }
-function markDone(id){const t=curPt.treatments.find(x=>x.id===id);if(t){t.status='realizado';save();renderTab();}}
-function delTx(id){if(!confirm('¿Eliminar?'))return;curPt.treatments=curPt.treatments.filter(x=>x.id!==id);save();renderTab();}
+function markDone(id){
+  const t=curPt.treatments.find(x=>x.id===id);
+  if(!t)return;
+  t.status='realizado';
+  save();renderTab();
+  try{evolucionarAutoOdo(t);}catch(e){console.error('Error evolución:',e);}
+}
+function delTx(id){
+  if(!confirm('¿Eliminar?'))return;
+  const t=curPt.treatments.find(x=>x.id===id);
+  try{
+    if(t&&t.autoOdo){
+      const desc=describirAutoOdo(t.autoOdo);
+      if(desc&&confirm('Este tratamiento marcó automáticamente el odontograma:\n\n'+desc+'\n\n¿Quitar también esas marcas?\n(Aceptar = quitar · Cancelar = conservar)'))limpiarAutoOdo(t.autoOdo);
+    }
+  }catch(e){console.error(e);}
+  curPt.treatments=curPt.treatments.filter(x=>x.id!==id);
+  save();renderTab();
+}
 function openAddTx(){
   const svcHtml=servicios.length?`
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">⚡ Seleccionar del catálogo</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${servicios.map(s=>`<button onclick="seleccionarServicioTx('${s.nombre.replace(/'/g,"\\'")}',${s.precio})" style="padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--bg);font-size:12px;cursor:pointer;color:var(--text);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">${s.nombre} <span style="font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</span></button>`).join('')}
-      </div>
-      <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
-    </div>`:'';
+  <div style="margin-bottom:12px">
+  <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">⚡ Seleccionar del catálogo</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px">
+  ${servicios.map(s=>`<button onclick="seleccionarServicioTx('${s.nombre.replace(/'/g,"\\'")}',${s.precio})" style="padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--bg);font-size:12px;cursor:pointer;color:var(--text);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">${s.nombre} <span style="font-weight:700;color:var(--green)">$${s.precio.toFixed(2)}</span></button>`).join('')}
+  </div>
+  <div style="border-top:1px solid var(--border);margin:12px 0 10px"></div>
+  </div>`:'';
   openModal(`<div class="modal-title">Agregar tratamiento</div>
   ${svcHtml}
-  <div class="form-row form-full"><div class="form-group"><label>Tratamiento *</label><input id="f_txn" placeholder="Obturación resina, Extracción..."></div></div>
-  <div class="form-row"><div class="form-group"><label>Diente(s)</label><input id="f_txt" placeholder="36, General"></div><div class="form-group"><label>Fecha</label><input id="f_txd" type="date" value="${today()}"></div></div>
+  <div class="form-row form-full"><div class="form-group"><label>Tratamiento *</label><input id="f_txn" placeholder="Obturación resina, Extracción, Endodoncia, Corona..." oninput="previewAutoTx()"></div></div>
+  <div id="tx-auto-preview" style="font-size:11px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;color:var(--text3);line-height:1.6">💡 Escribe el nombre del tratamiento para ver su vínculo con el odontograma.</div>
+  <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">🦷 Diente(s) — haz clic para seleccionar</div>
+  <div id="tx-dientes-picker" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;max-height:200px;overflow-y:auto;overflow-x:auto">${renderDientesPickerHtml('')}</div>
+  <div class="form-row"><div class="form-group"><label>Seleccionados / escribir manual</label><input id="f_txt" placeholder="36, 37 o General" oninput="refreshDientesPicker()"></div><div class="form-group"><label>Fecha</label><input id="f_txd" type="date" value="${today()}"></div></div>
   <div class="form-row"><div class="form-group"><label>Costo ($)</label><input id="f_txc" type="number" min="0" step="0.01"></div><div class="form-group"><label>Estado</label><select id="f_txs"><option value="pendiente">Pendiente</option><option value="realizado">Realizado</option></select></div></div>
   <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="saveTx()">Guardar</button></div>`);
+  document.querySelector('.modal').style.width='620px';
 }
 
 function seleccionarServicioTx(nombre,precio){
@@ -1848,7 +1900,14 @@ function seleccionarServicioTx(nombre,precio){
   if(c)c.value=precio.toFixed(2);
   n?.focus();
 }
-function saveTx(){const name=v('f_txn').trim();if(!name)return;curPt.treatments.push({id:Date.now(),name,tooth:v('f_txt')||'General',date:v('f_txd'),cost:parseFloat(v('f_txc'))||0,status:v('f_txs')});save();closeModal();renderTab();}
+function saveTx(){
+  const name=v('f_txn').trim();
+  if(!name){alert('Escribe el nombre del tratamiento');return;}
+  const tx={id:Date.now(),name,tooth:v('f_txt').trim()||'General',date:v('f_txd'),cost:parseFloat(v('f_txc'))||0,status:v('f_txs')};
+  curPt.treatments.push(tx);
+  save();closeModal();renderTab();
+  try{autoMarcarTx(tx);}catch(e){console.error('Error auto-marcado:',e);}
+}
 
 function renderPagos(){
   const p=curPt,txT=p.treatments.reduce((a,t)=>a+t.cost,0),paid=p.payments.reduce((a,py)=>a+py.amount,0),deuda=Math.max(0,txT-paid);
@@ -4287,6 +4346,341 @@ document.addEventListener('keydown',e=>{
     inp.focus();inp.select();
   }
 });
+
+// ═══ MOTOR TRATAMIENTO ↔ ODONTOGRAMA v2 ═══
+let _txSupActivo=null;
+
+const TX_ODO_MAP=[
+  {re:/extracci|exodoncia/i,tipo:'whole',pend:'extraccion',done:'perd_caries',etiqueta:'Extracción'},
+  {re:/endodoncia|conducto/i,tipo:'whole',pend:'endo_hacer',done:'endo_hecha',etiqueta:'Endodoncia'},
+  {re:/corona|funda/i,tipo:'whole',pend:'corona_r',done:'corona_h',etiqueta:'Corona'},
+  {re:/sellante|sellado/i,tipo:'whole',pend:'sell_nec',done:'sell_real',etiqueta:'Sellante'},
+  {re:/pr[oó]tesis\s+(total|completa)/i,tipo:'whole',pend:'prot_tot_r',done:'prot_tot_b',etiqueta:'Prótesis total'},
+  {re:/puente|pr[oó]tesis\s+fija/i,tipo:'whole',pend:null,done:'prot_fija',etiqueta:'Prótesis fija'},
+  {re:/pr[oó]tesis\s+removible|parcial/i,tipo:'whole',pend:null,done:'prot_rem',etiqueta:'Prótesis removible'},
+  {re:/obturaci|resina|amalgama|restauraci|empaste|calza/i,tipo:'surface',superficie:'obturado',etiqueta:'Obturación'},
+  {re:/implante|ortodoncia|brackets|alineador|limpieza|profilaxis|detartraje|fl[uú]or|blanqueamiento|control|consulta|revisi[oó]n|anestesia|radiograf/i,tipo:'none'}
+];
+const ODO_TX_MAP={
+  extraccion:{name:'Extracción dental',status:'pendiente'},
+  perd_caries:{name:'Extracción dental',status:'realizado'},
+  perd_otra:{name:'Extracción dental',status:'realizado'},
+  endo_hacer:{name:'Endodoncia',status:'pendiente'},
+  endo_hecha:{name:'Endodoncia',status:'realizado'},
+  corona_r:{name:'Corona',status:'pendiente'},
+  corona_h:{name:'Corona',status:'realizado'},
+  sell_nec:{name:'Sellante',status:'pendiente'},
+  sell_real:{name:'Sellante',status:'realizado'},
+  prot_fija:{name:'Prótesis fija',status:'realizado'},
+  prot_rem:{name:'Prótesis removible',status:'realizado'},
+  prot_tot_r:{name:'Prótesis total',status:'pendiente'},
+  prot_tot_b:{name:'Prótesis total',status:'realizado'}
+};
+function detectarTipoTx(nombre){
+  if(!nombre)return null;
+  for(const r of TX_ODO_MAP){if(r.re.test(nombre))return r;}
+  return null;
+}
+function parseDientesTx(str){
+  if(!str)return[];
+  const validos=new Set(ODO_GROUPS.flatMap(g=>g.teeth));
+  const nums=[];
+  String(str).split(/[,;]+/).forEach(part=>{
+    part=part.trim();
+    const rango=part.match(/^(\d{1,2})\s*[-–]\s*(\d{1,2})$/);
+    if(rango){let a=parseInt(rango[1]),b=parseInt(rango[2]);if(a>b){const tmp=a;a=b;b=tmp;}for(let i=a;i<=b;i++)nums.push(i);}
+    else if(/^\d{1,2}$/.test(part))nums.push(parseInt(part));
+  });
+  return[...new Set(nums)].filter(n=>validos.has(n));
+}
+function renderDientesPickerHtml(val){
+  const sel=parseDientesTx(val||'');
+  return ODO_GROUPS.map(g=>`
+  <div style="margin-bottom:8px">
+    <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;text-align:center">${g.label}</div>
+    <div style="display:flex;flex-wrap:nowrap;gap:3px;justify-content:center">
+    ${g.teeth.map(n=>{
+      const on=sel.includes(n);
+      return`<button type="button" onclick="toggleDienteTx(${n})" style="width:28px;height:24px;font-size:10px;font-weight:${on?'700':'500'};border-radius:6px;cursor:pointer;border:1px solid ${on?'var(--accent)':'var(--border)'};background:${on?'var(--accent)':'var(--card)'};color:${on?'#fff':'var(--text2)'};font-family:inherit;padding:0;flex-shrink:0">${n}</button>`;
+    }).join('')}
+    </div>
+  </div>`).join('');
+}
+function refreshDientesPicker(){
+  const box=document.getElementById('tx-dientes-picker');
+  if(box)box.innerHTML=renderDientesPickerHtml(v('f_txt'));
+}
+function toggleDienteTx(n){
+  const sel=parseDientesTx(v('f_txt'));
+  const i=sel.indexOf(n);
+  if(i>=0)sel.splice(i,1);else sel.push(n);
+  sel.sort((a,b)=>a-b);
+  const inp=document.getElementById('f_txt');
+  if(inp)inp.value=sel.join(', ');
+  refreshDientesPicker();
+}
+function previewAutoTx(){
+  const el=document.getElementById('tx-auto-preview');
+  if(!el)return;
+  const nombre=v('f_txn').trim();
+  if(!nombre){el.innerHTML='💡 Escribe el nombre del tratamiento para ver su vínculo con el odontograma.';return;}
+  const det=detectarTipoTx(nombre);
+  if(!det||det.tipo==='none'){el.innerHTML='ℹ️ Este tratamiento <b>no se vincula</b> automáticamente al odontograma (se registrará igual).';return;}
+  if(det.tipo==='surface'){el.innerHTML=`🦷 <b>Vínculo automático — ${det.etiqueta}:</b> al marcarlo ✓ Realizado seleccionarás las superficies (Vestibular, Distal, Palatino/Lingual, Mesial, Oclusal) y se pintarán de azul (Obturado).`;return;}
+  const pend=det.pend?ODO_WHOLE.find(w=>w.id===det.pend):null;
+  const done=det.done?ODO_WHOLE.find(w=>w.id===det.done):null;
+  el.innerHTML=`🦷 <b>Vínculo automático — ${det.etiqueta}</b><br>
+  <span style="display:inline-flex;align-items:center;gap:5px;margin-top:4px">Pendiente: ${pend?legSVG(pend,false)+' '+pend.label:'—'}</span><br>
+  <span style="display:inline-flex;align-items:center;gap:5px;margin-top:2px">Realizado: ${done?legSVG(done,false)+' '+done.label:'—'}</span>`;
+}
+function badgeOdo(t){
+  if(!t.autoOdo)return'';
+  let lbl='🦷 Vinculado';
+  if(t.autoOdo.tipo==='whole'){
+    const sid=t.status==='realizado'?(t.autoOdo.simboloDone||t.autoOdo.simboloPend):(t.autoOdo.simboloPend||t.autoOdo.simboloDone);
+    const w=ODO_WHOLE.find(x=>x.id===sid);
+    if(w)lbl='🦷 '+w.label;
+  }else lbl='🦷 Superficies (al realizar)';
+  return`<span title="Vinculado al odontograma" style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;margin-left:6px;white-space:nowrap">${lbl}</span>`;
+}
+function superficiesTx(t){
+  const a=t.autoOdo;
+  if(!a||a.tipo!=='surface')return'';
+  const zs=a.zonas||{};
+  const keys=Object.keys(zs);
+  const corto={'Vestibular':'V','Distal':'D','Palatino/Lingual':'P/L','Mesial':'M','Oclusal':'O'};
+  const nom=(n,z)=>{
+    const full=(typeof zoneNamesFor==='function')?zoneNamesFor(parseInt(n))[z]:(ZONE_NAMES[z]||z);
+    return corto[full]||full;
+  };
+  if(!keys.length)return' · ⬜ superficies por seleccionar';
+  return' · 🔵 '+keys.map(n=>`${n}: ${zs[n].map(z=>nom(n,z)).join('-')}`).join(' · ');
+}
+function aplicarWholeAuto(dientes,simbolo){
+  const conflictos=[];
+  dientes.forEach(n=>{
+    const w=curPt.wholeData[n];
+    const tieneSup=ODO_ZONES.some(z=>curPt.surfData[n+'_'+z]);
+    if(w&&w!==simbolo)conflictos.push(`Diente ${n}: ya tiene "${ODO_WHOLE.find(x=>x.id===w)?.label||w}"`);
+    else if(!w&&tieneSup)conflictos.push(`Diente ${n}: tiene superficies marcadas (se limpiarán)`);
+  });
+  if(conflictos.length&&!confirm('⚠️ Marcas previas en el odontograma:\n\n• '+conflictos.join('\n• ')+'\n\n¿Sobrescribir con el nuevo símbolo?'))return false;
+  dientes.forEach(n=>{
+    ODO_ZONES.forEach(z=>delete curPt.surfData[n+'_'+z]);
+    curPt.wholeData[n]=simbolo;
+  });
+  return true;
+}
+function autoMarcarTx(tx){
+  const det=detectarTipoTx(tx.name);
+  if(!det||det.tipo==='none')return;
+  const dientes=parseDientesTx(tx.tooth);
+  if(!dientes.length)return;
+  if(det.tipo==='whole'){
+    tx.autoOdo={tipo:'whole',dientes,simboloPend:det.pend,simboloDone:det.done};
+    const simbolo=tx.status==='realizado'?det.done:det.pend;
+    if(!simbolo){save();notifyOdo(`🦷 "${det.etiqueta}" registrada. Al marcarla ✓ Realizado se dibujará en el odontograma.`);return;}
+    if(aplicarWholeAuto(dientes,simbolo)){
+      save();
+      notifyOdo(`🦷 Odontograma actualizado: ${det.etiqueta} ${tx.status==='realizado'?'REALIZADA':'PENDIENTE'} · Diente(s) ${dientes.join(', ')}`);
+    }else save();
+  }else if(det.tipo==='surface'){
+    tx.autoOdo={tipo:'surface',dientes,zonas:{}};
+    save();
+    if(tx.status==='realizado')abrirSelectorSuperficies(dientes,tx);
+    else notifyOdo(`🦷 "${det.etiqueta}" pendiente: al marcarla ✓ Realizado elegirás las superficies.`);
+  }
+}
+function evolucionarAutoOdo(t){
+  const a=t.autoOdo;
+  if(a&&a.tipo==='whole'&&a.simboloDone){
+    const dientes=a.dientes||[];
+    if(!dientes.length)return;
+    const conflictos=[];
+    dientes.forEach(n=>{
+      const w=curPt.wholeData[n];
+      if(w&&w!==a.simboloPend&&w!==a.simboloDone)conflictos.push(`Diente ${n}: tiene "${ODO_WHOLE.find(x=>x.id===w)?.label||w}"`);
+    });
+    if(conflictos.length&&!confirm('⚠️ Evolución pendiente → realizada.\nSímbolos distintos encontrados:\n\n• '+conflictos.join('\n• ')+'\n\n¿Sobrescribir igualmente?'))return;
+    dientes.forEach(n=>{
+      const w=curPt.wholeData[n];
+      if(!w||w===a.simboloPend||w===a.simboloDone){
+        ODO_ZONES.forEach(z=>delete curPt.surfData[n+'_'+z]);
+        curPt.wholeData[n]=a.simboloDone;
+      }
+    });
+    save();
+    notifyOdo(`✅ Evolución aplicada: símbolo de REALIZADO en diente(s) ${dientes.join(', ')}`);
+  }else if(a&&a.tipo==='surface'){
+    abrirSelectorSuperficies(a.dientes&&a.dientes.length?a.dientes:parseDientesTx(t.tooth),t);
+  }else if(!a){
+    const det=detectarTipoTx(t.name);
+    if(!det||det.tipo==='none')return;
+    const dientes=parseDientesTx(t.tooth);
+    if(!dientes.length)return;
+    if(det.tipo==='whole'&&det.done){
+      if(!confirm(`¿Marcar en el odontograma "${det.etiqueta}" como REALIZADA en diente(s) ${dientes.join(', ')}?`))return;
+      if(aplicarWholeAuto(dientes,det.done)){
+        t.autoOdo={tipo:'whole',dientes,simboloPend:det.pend,simboloDone:det.done};
+        save();
+        notifyOdo(`🦷 Odontograma actualizado: ${det.etiqueta} realizada · Diente(s) ${dientes.join(', ')}`);
+      }
+    }else if(det.tipo==='surface'){
+      t.autoOdo={tipo:'surface',dientes,zonas:{}};
+      save();
+      abrirSelectorSuperficies(dientes,t);
+    }
+  }
+}
+function abrirSelectorSuperficies(dientes,tx){
+  if(!dientes.length){notifyOdo('⚠️ No hay dientes válidos para marcar');return;}
+  _txSupActivo=tx.id;
+  let html=`<div class="modal-title">🦷 Marcar superficies — ${tx.name}</div>
+  <div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1e40af">
+  Selecciona las superficies obturadas en cada diente. Se aplicará el símbolo oficial <strong>Obturado</strong> (azul).
+  </div>`;
+  dientes.forEach(n=>{
+    html+=`<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Diente ${n}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+    ${ODO_ZONES.map(z=>{
+      const existente=curPt.surfData[n+'_'+z];
+      const lbl=ODO_SURF.find(s=>s.id===existente)?.label;
+      return`<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;background:var(--bg)">
+        <input type="checkbox" id="sup_${n}_${z}" style="width:15px;height:15px;accent-color:var(--accent)">
+        <span style="flex:1">${zoneNamesFor(n)[z]}</span>
+        ${existente?`<span style="font-size:10px;color:var(--amber);font-weight:600">⚠ ${lbl}</span>`:''}
+      </label>`;
+    }).join('')}
+    </div></div>`;
+  });
+  html+=`<div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Ahora no</button>
+    <button class="btn-primary" onclick="aplicarSuperficiesTx()">Aplicar al odontograma</button>
+  </div>`;
+  openModal(html);
+  document.querySelector('.modal').style.width='520px';
+}
+function aplicarSuperficiesTx(){
+  const tx=curPt.treatments.find(x=>x.id===_txSupActivo);
+  const dientes=(tx&&tx.autoOdo&&tx.autoOdo.dientes)||[];
+  const zonas={};const conflictos=[];
+  dientes.forEach(n=>{
+    const marcadas=[];let conflictoWhole=false;
+    ODO_ZONES.forEach(z=>{
+      const chk=document.getElementById(`sup_${n}_${z}`);
+      if(chk&&chk.checked){
+        marcadas.push(z);
+        const ex=curPt.surfData[n+'_'+z];
+        if(ex&&ex!=='obturado')conflictos.push(`Diente ${n} · ${zoneNamesFor(n)[z]}: tiene "${ODO_SURF.find(s=>s.id===ex)?.label}"`);
+        if(curPt.wholeData[n]&&!conflictoWhole){conflictos.push(`Diente ${n}: tiene símbolo completo "${ODO_WHOLE.find(x=>x.id===curPt.wholeData[n])?.label||''}" (se quitará)`);conflictoWhole=true;}
+      }
+    });
+    if(marcadas.length)zonas[n]=marcadas;
+  });
+  if(!Object.keys(zonas).length){alert('Selecciona al menos una superficie');return;}
+  if(conflictos.length&&!confirm('⚠️ Marcas previas encontradas:\n\n• '+conflictos.join('\n• ')+'\n\n¿Sobrescribir?'))return;
+  Object.entries(zonas).forEach(([n,zs])=>{
+    delete curPt.wholeData[n];
+    zs.forEach(z=>curPt.surfData[n+'_'+z]='obturado');
+  });
+  if(tx)tx.autoOdo={tipo:'surface',dientes,zonas};
+  save();closeModal();renderTab();
+  notifyOdo('🦷 Odontograma actualizado: '+Object.entries(zonas).map(([n,zs])=>`diente ${n} (${zs.map(z=>zoneNamesFor(n)[z]).join(', ')})`).join(' · '));
+}
+function sugerirTxDesdeOdonto(tooth,odoId){
+  const info=ODO_TX_MAP[odoId];if(!info)return;
+  const odoLbl=ODO_WHOLE.find(w=>w.id===odoId)?.label||odoId;
+  const svc=servicios.find(s=>s.nombre.toLowerCase().includes(info.name.toLowerCase()));
+  openModal(`<div class="modal-title">💡 Tratamiento sugerido</div>
+  <div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#1e40af">
+  Marcaste <strong>"${odoLbl}"</strong> en el diente <strong>${tooth}</strong>. ¿Registrar el tratamiento <strong>${info.name}</strong> como <strong>${info.status}</strong>?
+  </div>
+  <div class="form-row form-full"><div class="form-group"><label>Tratamiento *</label><input id="f_stn" value="${svc?svc.nombre:info.name}"></div></div>
+  <div class="form-row">
+    <div class="form-group"><label>Costo ($)</label><input id="f_stc" type="number" min="0" step="0.01" value="${svc?svc.precio.toFixed(2):''}"></div>
+    <div class="form-group"><label>Fecha</label><input id="f_std" type="date" value="${today()}"></div>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">🦷 Diente: <b>${tooth}</b> · El tratamiento quedará vinculado al símbolo del odontograma.</div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">No, gracias</button>
+    <button class="btn-primary" onclick="crearTxDesdeOdonto(${tooth},'${odoId}')">+ Crear tratamiento</button>
+  </div>`);
+}
+function crearTxDesdeOdonto(tooth,odoId){
+  const name=v('f_stn').trim();if(!name)return;
+  const info=ODO_TX_MAP[odoId];
+  const det=detectarTipoTx(name);
+  const tx={id:Date.now(),name,tooth:String(tooth),date:v('f_std'),cost:parseFloat(v('f_stc'))||0,status:info.status};
+  if(det&&det.tipo==='whole')tx.autoOdo={tipo:'whole',dientes:[tooth],simboloPend:det.pend,simboloDone:det.done,origen:'odontograma'};
+  else tx.autoOdo={tipo:'whole',dientes:[tooth],simboloPend:odoId,simboloDone:odoId,origen:'odontograma'};
+  curPt.treatments.push(tx);
+  save();closeModal();
+  if(curTab==='odontograma')renderTab();
+  notifyOdo(`✅ Tratamiento "${name}" creado (${info.status}) y vinculado al diente ${tooth}`);
+}
+function sugerirTxDesdeCaries(tooth,zone){
+  const svc=servicios.find(s=>/obturaci|resina/i.test(s.nombre));
+  openModal(`<div class="modal-title">💡 Tratamiento sugerido</div>
+  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#92400e">
+  Se marcó <strong>caries</strong> en el diente <strong>${tooth}</strong> (${zoneNamesFor(tooth)[zone]}). ¿Registrar el tratamiento pendiente correspondiente?
+  </div>
+  <div class="form-row form-full"><div class="form-group"><label>Tratamiento *</label><input id="f_stn" value="${svc?svc.nombre:'Obturación resina'}"></div></div>
+  <div class="form-row">
+    <div class="form-group"><label>Costo ($)</label><input id="f_stc" type="number" min="0" step="0.01" value="${svc?svc.precio.toFixed(2):''}"></div>
+    <div class="form-group"><label>Fecha</label><input id="f_std" type="date" value="${today()}"></div>
+  </div>
+  ${svc?`<div style="font-size:11px;color:var(--text3);margin-bottom:10px">⚡ Precio tomado del catálogo de servicios.</div>`:''}
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">No, gracias</button>
+    <button class="btn-primary" onclick="crearTxDesdeCaries(${tooth})">+ Crear tratamiento pendiente</button>
+  </div>`);
+}
+function crearTxDesdeCaries(tooth){
+  const name=v('f_stn').trim();if(!name)return;
+  const tx={id:Date.now(),name,tooth:String(tooth),date:v('f_std'),cost:parseFloat(v('f_stc'))||0,status:'pendiente'};
+  tx.autoOdo={tipo:'surface',dientes:[tooth],zonas:{},origen:'odontograma'};
+  curPt.treatments.push(tx);
+  save();closeModal();
+  if(curTab==='odontograma')renderTab();
+  notifyOdo(`✅ Tratamiento "${name}" creado como pendiente para el diente ${tooth}`);
+}
+function describirAutoOdo(a){
+  if(!a)return'';
+  if(a.tipo==='whole')return`Símbolo de diente completo en: ${a.dientes.join(', ')}`;
+  if(a.tipo==='surface'){
+    const zs=Object.entries(a.zonas||{});
+    if(!zs.length)return`Dientes reservados para superficies: ${a.dientes.join(', ')}`;
+    return'Obturación marcada en: '+zs.map(([n,z])=>`diente ${n} (${z.map(x=>zoneNamesFor(n)[x]).join(', ')})`).join(' · ');
+  }
+  return'';
+}
+function limpiarAutoOdo(a){
+  if(a.tipo==='whole'){
+    a.dientes.forEach(n=>{
+      const w=curPt.wholeData[n];
+      if(w===a.simboloPend||w===a.simboloDone)delete curPt.wholeData[n];
+    });
+  }else if(a.tipo==='surface'){
+    Object.entries(a.zonas||{}).forEach(([n,zs])=>{
+      zs.forEach(z=>{if(curPt.surfData[n+'_'+z]==='obturado')delete curPt.surfData[n+'_'+z];});
+    });
+  }
+}
+function notifyOdo(msg){
+  let el=document.getElementById('odoNotify');
+  if(!el){
+    el=document.createElement('div');
+    el.id='odoNotify';
+    el.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 18px;border-radius:10px;font-size:12.5px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:10000;opacity:0;transition:all .3s;max-width:82vw;text-align:center;line-height:1.5';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.opacity='1';
+  el.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(-50%) translateY(20px)';},4200);
+}
 
 // ═══ INIT ═══
 load();
