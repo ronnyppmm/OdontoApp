@@ -499,54 +499,95 @@ function calcAge(birthdate){
 function genAutorizacion(){return Array.from({length:49},()=>Math.floor(Math.random()*10)).join('')}
 
 // ═══ STORAGE ═══
+// ═══ BASE DE DATOS LOCAL (IndexedDB = varios GB de capacidad) ═══
+let _dbMain=null;
+function openMainDB(){
+return new Promise((res,rej)=>{
+if(_dbMain)return res(_dbMain);
+const rq=indexedDB.open('odontoapp_db',1);
+rq.onupgradeneeded=e=>{e.target.result.createObjectStore('kv');};
+rq.onsuccess=e=>{_dbMain=e.target.result;
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(err){}
+res(_dbMain);};
+rq.onerror=e=>rej(e.target.error);
+});
+}
+function idbSet(key,val){
+return openMainDB().then(db=>new Promise(res=>{
+const tx=db.transaction('kv','readwrite');
+tx.objectStore('kv').put(val,key);
+tx.oncomplete=()=>res(true);tx.onerror=()=>res(false);
+})).catch(e=>{console.warn('IndexedDB:',e);return false;});
+}
+function idbGet(key){
+return openMainDB().then(db=>new Promise(res=>{
+const rq=db.transaction('kv','readonly').objectStore('kv').get(key);
+rq.onsuccess=()=>res(rq.result);rq.onerror=()=>res(undefined);
+})).catch(()=>undefined);
+}
 function save(){
-  localStorage.setItem('oa3_pts',JSON.stringify(patients));
-  localStorage.setItem('oa3_eg',JSON.stringify(egresos));
-  localStorage.setItem('oa3_fact',JSON.stringify(facturas));
-  localStorage.setItem('oa3_nid',nextId);
-  localStorage.setItem('oa3_neg',nextEgId);
-  localStorage.setItem('oa3_nfact',nextFactId);
-  localStorage.setItem('oa3_nreceta',nextRecetaId);
-  localStorage.setItem('oa3_npresup',nextPresupId);
-  localStorage.setItem('oa3_logo',JSON.stringify({
-    text:document.getElementById('logoText').textContent,
-    prof:document.getElementById('logoProfesional').textContent,
-    color:logoColor,img:logoImg,
-    ruc:clinicaRUC,dir:clinicaDireccion,tel:clinicaTelefono
-  }));
-  localStorage.setItem('oa3_arch',JSON.stringify(archivosContables));
-  localStorage.setItem('oa3_svc',JSON.stringify(servicios));
-  sbAutoSync();
+const bundle={v:1,t:Date.now(),patients,egresos,facturas,archivosContables,servicios,
+nextId,nextEgId,nextFactId,nextRecetaId,nextPresupId,
+logo:{text:document.getElementById('logoText').textContent,prof:document.getElementById('logoProfesional').textContent,color:logoColor,img:logoImg,ruc:clinicaRUC,dir:clinicaDireccion,tel:clinicaTelefono}};
+idbSet('state',bundle); // ← la "base de datos grande"
+try{ // espejo localStorage (compatibilidad); si no cabe, no rompe nada
+localStorage.setItem('oa3_pts',JSON.stringify(patients));
+localStorage.setItem('oa3_eg',JSON.stringify(egresos));
+localStorage.setItem('oa3_fact',JSON.stringify(facturas));
+localStorage.setItem('oa3_nid',nextId);
+localStorage.setItem('oa3_neg',nextEgId);
+localStorage.setItem('oa3_nfact',nextFactId);
+localStorage.setItem('oa3_nreceta',nextRecetaId);
+localStorage.setItem('oa3_npresup',nextPresupId);
+localStorage.setItem('oa3_logo',JSON.stringify(bundle.logo));
+localStorage.setItem('oa3_arch',JSON.stringify(archivosContables));
+localStorage.setItem('oa3_svc',JSON.stringify(servicios));
+localStorage.setItem('oa3_meta',JSON.stringify({t:bundle.t,bytes:new Blob([JSON.stringify(bundle)]).size}));
+}catch(e){console.warn('localStorage lleno: los datos viven en IndexedDB');}
+sbAutoSync();
 }
 
-function load(){
-  const p=localStorage.getItem('oa3_pts');
-  if(p){patients=JSON.parse(p);patients.forEach(pt=>{
-    ['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
-    ['treatments','payments','appointments','diary','images','consents','recetas','presupuestos'].forEach(k=>{if(!pt[k])pt[k]=[];});
-    // Migrate: remove stored age, use calcAge from birthdate
-    if(pt.birthdate&&pt.age!==undefined) delete pt.age;
-  });}
-  const eg=localStorage.getItem('oa3_eg');if(eg)egresos=JSON.parse(eg);
-  const fa=localStorage.getItem('oa3_fact');if(fa)facturas=JSON.parse(fa);
-  const nid=localStorage.getItem('oa3_nid');if(nid)nextId=parseInt(nid);
-  const neg=localStorage.getItem('oa3_neg');if(neg)nextEgId=parseInt(neg);
-  const nfact=localStorage.getItem('oa3_nfact');if(nfact)nextFactId=parseInt(nfact);
-  const nrec=localStorage.getItem('oa3_nreceta');if(nrec)nextRecetaId=parseInt(nrec);
-  const npresup=localStorage.getItem('oa3_npresup');if(npresup)nextPresupId=parseInt(npresup);
-  const arch=localStorage.getItem('oa3_arch');if(arch)archivosContables=JSON.parse(arch);
-  const svc=localStorage.getItem('oa3_svc');if(svc)servicios=JSON.parse(svc);
-  const logo=localStorage.getItem('oa3_logo');
-  if(logo){
-    const l=JSON.parse(logo);
-    document.getElementById('logoText').textContent=l.text||'OdontoApp';
-    document.getElementById('logoProfesional').textContent=l.prof||'Dr. Profesional';
-    logoColor=l.color||'#0ea5e9';logoImg=l.img||null;
-    clinicaRUC=l.ruc||'';clinicaDireccion=l.dir||'';clinicaTelefono=l.tel||'';
-    applyColor(logoColor);
-    if(logoImg)applyLogoImg(logoImg);
-  }
-  if(patients.length===0)seedDemo();
+async function load(){
+let b=await idbGet('state');
+if(!b||!b.patients){ // migración automática desde localStorage (primera vez)
+const p=localStorage.getItem('oa3_pts');
+if(p){
+b={v:1,t:Date.now(),
+patients:JSON.parse(p),
+egresos:JSON.parse(localStorage.getItem('oa3_eg')||'[]'),
+facturas:JSON.parse(localStorage.getItem('oa3_fact')||'[]'),
+archivosContables:JSON.parse(localStorage.getItem('oa3_arch')||'[]'),
+servicios:JSON.parse(localStorage.getItem('oa3_svc')||'[]'),
+nextId:parseInt(localStorage.getItem('oa3_nid')||'1'),
+nextEgId:parseInt(localStorage.getItem('oa3_neg')||'1'),
+nextFactId:parseInt(localStorage.getItem('oa3_nfact')||'1'),
+nextRecetaId:parseInt(localStorage.getItem('oa3_nreceta')||'1'),
+nextPresupId:parseInt(localStorage.getItem('oa3_npresup')||'1'),
+logo:JSON.parse(localStorage.getItem('oa3_logo')||'null')};
+idbSet('state',b);
+}
+}
+if(b){
+patients=b.patients||[];egresos=b.egresos||[];facturas=b.facturas||[];
+archivosContables=b.archivosContables||[];servicios=b.servicios||[];
+nextId=b.nextId||nextId;nextEgId=b.nextEgId||nextEgId;nextFactId=b.nextFactId||nextFactId;
+nextRecetaId=b.nextRecetaId||nextRecetaId;nextPresupId=b.nextPresupId||nextPresupId;
+if(b.logo){
+document.getElementById('logoText').textContent=b.logo.text||'OdontoApp';
+document.getElementById('logoProfesional').textContent=b.logo.prof||'Dr. Profesional';
+logoColor=b.logo.color||'#0ea5e9';logoImg=b.logo.img||null;
+clinicaRUC=b.logo.ruc||'';clinicaDireccion=b.logo.dir||'';clinicaTelefono=b.logo.tel||'';
+applyColor(logoColor);if(logoImg)applyLogoImg(logoImg);
+}
+}
+patients.forEach(pt=>{
+['surfData','wholeData'].forEach(k=>{if(!pt[k])pt[k]={};});
+['treatments','payments','appointments','diary','images','consents','recetas','presupuestos'].forEach(k=>{if(!pt[k])pt[k]=[];});
+if(pt.birthdate&&pt.age!==undefined)delete pt.age;
+});
+if(patients.length===0)seedDemo();
+renderSidebar();
+if(curPt)selectPt(curPt.id);else showPage(curPage||'dashboard');
 }
 
 function seedDemo(){
@@ -594,7 +635,7 @@ function showPage(page){
   const titles={dashboard:'Dashboard',agenda:'Agenda de Citas',estadisticas:'Estadísticas',configuracion:'⚙️ Configuración'};
   document.getElementById('ptTitle').textContent=titles[page]||'Dashboard';
   const fns={dashboard:renderDashboard,agenda:renderAgendaPage,estadisticas:renderEstadisticas,configuracion:renderConfiguracion};
-  if(fns[page]) document.getElementById('mainContent').innerHTML=fns[page]();
+if(fns[page]) document.getElementById('mainContent').innerHTML=fns[page]();
 if(page==='configuracion')setTimeout(pintarMedidor,150);
 }
 
@@ -2670,12 +2711,12 @@ function renderConfiguracion(){
       <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-primary" onclick="guardarWAMsg(event)">💾 Guardar mensaje</button></div>
     </div>
 
-    <div class="card">
+ <div class="card">
 <div class="card-title">💾 Medidor de almacenamiento</div>
 <div id="storage-meter" style="font-size:12px;color:var(--text3)">Midiendo…</div>
 </div>
 <div class="card" style="border:1px solid #fca5a5">
-      <div class="card-title" style="color:var(--red)">⚠️ Zona de peligro</div>
+<div class="card-title" style="color:var(--red)">⚠️ Zona de peligro</div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Esta acción es irreversible. Descarga un backup antes de proceder.</div>
       <button onclick="factoryReset()" style="padding:12px 24px;background:#ef4444;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🗑 Restablecer app a valores de fábrica</button>
     </div>
@@ -4694,6 +4735,68 @@ function notifyOdo(msg){
 // ═══ MEDIDOR DE ALMACENAMIENTO (local + Supabase) ═══
 async function medirAlmacenamiento(){
   const keys=['oa3_pts','oa3_eg','oa3_fact','oa3_logo','oa3_arch','oa3_svc','oa3_meds','oa3_qa','oa3_sb','oa3_nid','oa3_neg','oa3_nfact','oa3_nreceta','oa3_npresup','oa3_dark','oa3_tz','oa3_wamsg','oa3_sb_lastsync'];
+  let lsBytes=0;
+  keys.forEach(k=>{const s=localStorage.getItem(k);if(s)lsBytes+=new Blob([s]).size;});
+  let idbBytes=0,idbCount=0;
+  try{
+    const db=await openImgDB();
+    await new Promise(res=>{
+      const cur=db.transaction('images','readonly').objectStore('images').openCursor();
+      cur.onsuccess=e=>{
+        const c=e.target.result;
+        if(c){if(c.value&&c.value.size)idbBytes+=c.value.size;idbCount++;c.continue();}
+        else res();
+      };
+      cur.onerror=()=>res();
+    });
+  }catch(e){}
+  return{lsBytes,idbBytes,idbCount};
+}
+async function medirSupabase(){
+  if(!sbClient||!sbClinicaId)return null;
+  let payloadBytes=0;
+  try{payloadBytes=new Blob([JSON.stringify(buildPayload())]).size;}catch(e){}
+  let dbBytes=null;
+  try{
+    const {data,error}=await sbClient.rpc('clinica_db_size');
+    if(!error&&typeof data==='number')dbBytes=data;
+  }catch(e){}
+  return{payloadBytes,dbBytes};
+}
+async function pintarMedidor(){
+  const el=document.getElementById('storage-meter');
+  if(!el)return;
+  const m=await medirAlmacenamiento();
+  const LS_MAX=5*1024*1024;
+  const pct=Math.min(100,Math.round(m.lsBytes/LS_MAX*100));
+  const col=pct<60?'var(--green)':pct<85?'var(--amber)':'var(--red)';
+  let html=`
+  <div style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span>📱 Datos del consultorio (localStorage)</span><b style="color:${col}">${fmtBytes(m.lsBytes)} / ~5 MB · ${pct}%</b></div>
+    <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:4px;transition:width .4s"></div></div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">${pct>=85?'🔴 Cerca del límite: haz un backup y libera espacio (imágenes y pacientes antiguos).':pct>=60?'🟡 Vigila el crecimiento: las miniaturas de imágenes son lo que más pesa.':'🟢 Margen saludable.'}</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:12px"><span>🖼️ Radiografías/fotos originales (este dispositivo)</span><b>${fmtBytes(m.idbBytes)}${m.idbCount?' · '+m.idbCount+' archivos':''}</b></div>`;
+  if(sbClient&&sbClinicaId){
+    const s=await medirSupabase();
+    if(s){
+      const sbPct=s.dbBytes!==null?Math.max(1,Math.min(100,Math.round(s.dbBytes/(500*1024*1024)*100))):0;
+      html+=`<div style="border-top:1px solid var(--border);padding-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px"><span>☁️ Peso de cada sincronización a Supabase</span><b>${fmtBytes(s.payloadBytes)}</b></div>
+      ${s.dbBytes!==null?`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span>☁️ Base de datos en la nube (plan gratis: 500 MB)</span><b>${fmtBytes(s.dbBytes)} · ${sbPct}%</b></div>
+      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${sbPct}%;background:var(--accent);border-radius:4px"></div></div>`
+      :`<div style="font-size:10px;color:var(--text3)">💡 Para ver el total de la base de datos, ejecuta una vez el SQL opcional del medidor en tu Supabase.</div>`}
+      </div>`;
+    }
+  }else{
+    html+=`<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px">☁️ Supabase sin conectar: tu única copia está en este dispositivo.</div>`;
+  }
+  el.innerHTML=html;
+}
+
+// ═══ MEDIDOR DE ALMACENAMIENTO (local + Supabase) ═══
+async function medirAlmacenamiento(){
+  const keys=['oa3_pts','oa3_eg','oa3_fact','oa3_nid','oa3_neg','oa3_nfact','oa3_nreceta','oa3_npresup','oa3_logo','oa3_arch','oa3_svc','oa3_meds','oa3_qa','oa3_sb','oa3_dark','oa3_tz','oa3_wamsg','oa3_sb_lastsync'];
   let lsBytes=0;
   keys.forEach(k=>{const s=localStorage.getItem(k);if(s)lsBytes+=new Blob([s]).size;});
   let idbBytes=0,idbCount=0;
