@@ -5115,12 +5115,13 @@ div.querySelector('span').focus();
 
 function saveReceta(){
   const diagnosticos=[];
-  document.querySelectorAll('[id^="diag-item-"]').forEach(row=>{
-    const id=row.id.replace('diag-item-','');
-    const cod=document.getElementById(`dcie_${id}`)?.value?.trim().toUpperCase();
-    const desc=document.getElementById(`ddesc_${id}`)?.value?.trim();
-    if(cod||desc)diagnosticos.push({cod:cod||'',desc:desc||''});
-  });
+document.querySelectorAll('[id^="diag-item-"]').forEach(row=>{
+const codEl=row.querySelector('input[id^="dcie_"]');
+const descEl=row.querySelector('input[id^="ddesc_"]');
+const cod=(codEl?codEl.value:'').trim().toUpperCase();
+const desc=(descEl?descEl.value:'').trim();
+if(cod||desc)diagnosticos.push({cod:cod,desc:desc});
+});
   const meds=[];
   document.querySelectorAll('[id^="med-item-"]').forEach(row=>{
     const id=row.id.replace('med-item-','');
