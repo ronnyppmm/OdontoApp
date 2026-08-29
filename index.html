@@ -304,6 +304,7 @@ body{font-family:'Manrope','Segoe UI',system-ui,-apple-system,sans-serif}
 .bday-card{background:linear-gradient(135deg,#e7f4f2,#d3e9e5);border:1px solid #bcd9d4}
 .diary-alert{background:#e7f4f2;color:#0b5d54}
 .badge-amber{background:#e9e2d4;color:#6b5233}
+[contenteditable][data-ph]:empty:before{content:attr(data-ph);color:var(--text3);font-weight:500}
 </style>
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -5025,7 +5026,10 @@ function openNuevaReceta(){
     <div class="form-group"><label>N° Historia Clínica</label><input id="f_rhc" placeholder="H.C."></div>
   </div>
   <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Diagnósticos CIE-10</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Diagnósticos (CIE-10)</div>
+<button onclick="addDiagManual()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:700">+ Ingreso manual</button>
+</div>
     <div id="diag-items"></div>
     <button onclick="addDiagItem()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600">+ Agregar diagnóstico</button>
   </div>
@@ -5097,6 +5101,16 @@ div.innerHTML=dl+`
 <input id="mdu_${id}" value="${c?c.duracion:''}"></div>
 ${c&&c.indicacion?`<div style="margin-top:8px;font-size:11px;color:var(--text2);background:var(--bg);border-radius:6px;padding:6px 8px">💡 ${c.indicacion}</div>`:''}`;
 document.getElementById('med-items').appendChild(div);
+}
+function addDiagManual(){
+diagItemCount++;
+const id=diagItemCount;
+const div=document.createElement('div');
+div.id=`diag-item-${id}`;
+div.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:8px';
+div.innerHTML=`<span class="badge badge-blue" contenteditable="true" data-ph="Código" style="min-width:78px;padding:5px 10px;text-align:center;outline:1px dashed var(--accent);cursor:text;font-weight:700"></span><input placeholder="Descripción del diagnóstico (ej: Caries dentinaria profunda)" style="flex:1"><button onclick="document.getElementById('diag-item-${id}').remove()" style="padding:4px 8px;border:1px solid #fca5a5;border-radius:6px;background:#fee2e2;color:#991b1b;cursor:pointer">✕</button>`;
+document.getElementById('diag-items').appendChild(div);
+div.querySelector('span').focus();
 }
 
 function saveReceta(){
