@@ -4246,6 +4246,7 @@ function toggleDarkMode(){
 
 // ═══ CONFIGURACIÓN (página completa) ═══
 function renderConfiguracion(){
+  const cieN=CIE10_FULL?CIE10_FULL.length:0;
   const COLS=['#2f9d94','#025f67','#063154','#10b981','#b98a4e','#ef4444','#8b5cf6','#0f172a'];
   const dark=document.body.classList.contains('dark-mode');
   return`
@@ -4357,7 +4358,12 @@ function renderConfiguracion(){
         <button onclick="agregarMedCfg()" class="btn-primary">+ Agregar</button>
       </div>
     </div>
-
+<div class="card">
+<div class="card-title">📚 CIE-10 completo (autocompletar)</div>
+<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Importa una vez el listado oficial en español (CSV) y el autocompletador de diagnósticos buscará entre todos los códigos, sin conexión.</div>
+<button class="btn-primary" onclick="importarCIE10()">📥 Importar CIE-10 (CSV)</button>
+<span id="cie10count" style="font-size:11px;color:var(--text3);margin-left:8px"></span>
+</div>
     <div class="card">
       <div class="card-title">📱 Mensaje recordatorio WhatsApp</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Variables: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{nombre}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{fecha}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{hora}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{motivo}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{clinica}</code></div>
@@ -4365,7 +4371,12 @@ function renderConfiguracion(){
       <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-primary" onclick="guardarWAMsg(event)">💾 Guardar mensaje</button></div>
     </div>
 
- <div class="card">
+ 
+  <div class="card">
+<div class="card-title">📚 CIE-10 completo</div>
+<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Carga el CSV oficial CIE-10 para buscar cualquier enfermedad. ${cieN?`<strong style="color:var(--green)">✓ ${cieN} códigos cargados.</strong>`:'Aún sin CSV (usando lista odontológica). '}</div>
+<button class="btn-primary" onclick="cie10Cargar()">📥 Cargar CSV CIE-10</button>
+</div>
 <div class="card-title">💾 Medidor de almacenamiento</div>
 <div id="storage-meter" style="font-size:12px;color:var(--text3)">Midiendo…</div>
 </div>
@@ -4850,42 +4861,69 @@ const CIE10_ODO=[
   ['Z012','EXAMEN ODONTOLOGICO'],['Z463','PRUEBA Y AJUSTE DE PROTESIS DENTAL'],
   ['Z464','PRUEBA Y AJUSTE DE DISPOSITIVO ORTODONCICO'],['Z965','PRESENCIA DE IMPLANTES DENTALES'],
 ];
+let CIE10_FULL=null;
+function parseCSVLine(line){const out=[];let cur='';let inQ=false;
+for(let i=0;i<line.length;i++){const ch=line[i];
+if(inQ){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=ch;}
+else{if(ch==='"')inQ=true;else if(ch===','){out.push(cur);cur='';}else cur+=ch;}}
+out.push(cur);return out;}
+function importarCIE10(){
+const input=document.createElement('input');input.type='file';input.accept='.csv,.txt,.json';
+input.onchange=e=>{const file=e.target.files[0];if(!file)return;
+const reader=new FileReader();
+reader.onload=ev=>{try{
+const lines=String(ev.target.result).split(/\r?\n/);const list=[];
+for(const line of lines){const t=line.trim();if(!t||t.startsWith('code,code_0'))continue;
+const c=parseCSVLine(t);const code=(c[0]||'').trim().toUpperCase();const desc=(c[6]||'').trim();
+if(!code||code.includes('-')||!desc)continue;list.push([code,desc]);}
+if(!list.length){alert('No se encontraron códigos válidos.');return;}
+openMainDB().then(db=>new Promise(res=>{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(list,'cie10full');tx.oncomplete=()=>res(true);tx.onerror=()=>res(false);})).then(ok=>{
+if(ok){CIE10_FULL=list;const el=document.getElementById('cie10count');if(el)el.textContent='✓ '+list.length.toLocaleString()+' códigos cargados';
+alert('✓ CIE-10 completo importado: '+list.length.toLocaleString()+' códigos listos para autocompletar (sin conexión).');}
+else alert('No se pudo guardar en IndexedDB.');});
+}catch(err){alert('Error al leer el archivo: '+err.message);}};
+reader.readAsText(file);};
+input.click();}
+async function loadCIE10Full(){try{const db=await openMainDB();
+const data=await new Promise(res=>{const rq=db.transaction('kv','readonly').objectStore('kv').get('cie10full');rq.onsuccess=()=>res(rq.result||null);rq.onerror=()=>res(null);});
+if(data&&data.length){CIE10_FULL=data;const el=document.getElementById('cie10count');if(el)el.textContent='✓ '+data.length.toLocaleString()+' códigos cargados';}}catch(e){}}
 
 function buscarCIE10(query){
-  if(!query||query.length<2)return[];
-  const q=query.toUpperCase().trim();
-  const byCode=CIE10_ODO.filter(([cod])=>cod.startsWith(q));
-  const byDesc=CIE10_ODO.filter(([cod,desc])=>!cod.startsWith(q)&&desc.includes(q));
-  return [...byCode,...byDesc].slice(0,8);
+if(!query||query.length<2)return[];
+const q=query.toUpperCase().trim();
+const base=(CIE10_FULL&&CIE10_FULL.length)?CIE10_FULL:CIE10_ODO;
+const byCode=base.filter(([cod])=>cod.startsWith(q));
+const byDesc=base.filter(([cod,desc])=>!cod.startsWith(q)&&desc.toUpperCase().includes(q));
+return [...byCode,...byDesc].slice(0,8);
 }
 
 let diagItemCount=0;
 let activeDiagId=null;
 
 function addDiagItem(){
-  diagItemCount++;
-  const id=diagItemCount;
-  const div=document.createElement('div');
-  div.id=`diag-item-${id}`;
-  div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;position:relative';
-  div.innerHTML=`
-    <div style="display:flex;gap:8px;align-items:flex-start">
-      <div style="flex:0 0 110px">
-        <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:3px">Código CIE-10</div>
-        <input id="dcie_${id}" type="text" placeholder="K021..." autocomplete="off"
-          oninput="diagCieInput(event,${id})" onfocus="diagCieInput(event,${id})"
-          style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;font-weight:700;text-transform:uppercase;color:var(--accent);outline:none;background:#f8fafc">
-      </div>
-      <div style="flex:1;position:relative">
-        <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:3px">Descripción / Diagnóstico</div>
-        <input id="ddesc_${id}" type="text" placeholder="Busca por nombre de la enfermedad..." autocomplete="off"
-          oninput="diagDescInput(event,${id})" onfocus="diagDescInput(event,${id})"
-          style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text);outline:none;background:#f8fafc;font-family:inherit">
-        <div id="diag-results-${id}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 10px 10px;z-index:600;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
-      </div>
-      ${id>1?`<button onclick="removeDiagItem(${id})" style="margin-top:18px;width:32px;height:32px;border:1px solid #fca5a5;border-radius:8px;background:#fee2e2;color:#991b1b;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>`:'<div style="width:32px;flex-shrink:0"></div>'}
-    </div>`;
-  document.getElementById('diag-items').appendChild(div);
+diagItemCount++;
+const id=diagItemCount;
+const div=document.createElement('div');
+div.id=`diag-item-${id}`;
+div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;position:relative';
+div.innerHTML=`
+<div style="display:flex;gap:8px;align-items:flex-start">
+<div style="flex:0 0 110px">
+<div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:3px">Código CIE-10</div>
+<input id="dcie_${id}" type="text" placeholder="K021..." autocomplete="off"
+oninput="diagCieInput(event,${id})" onfocus="diagCieInput(event,${id})"
+style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;font-weight:700;text-transform:uppercase;color:var(--accent);outline:none;background:#f8fafc">
+</div>
+<div style="flex:1;position:relative">
+<div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:3px">Descripción / Diagnóstico</div>
+<input id="ddesc_${id}" type="text" placeholder="Escribe o busca por nombre..." autocomplete="off"
+oninput="diagDescInput(event,${id})" onfocus="diagDescInput(event,${id})"
+style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text);outline:none;background:#f8fafc;font-family:inherit">
+<div id="diag-results-${id}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 10px 10px;z-index:600;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
+</div>
+<button onclick="removeDiagItem(${id})" style="margin-top:18px;width:32px;height:32px;border:1px solid #fca5a5;border-radius:8px;background:#fee2e2;color:#991b1b;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
+</div>`;
+document.getElementById('diag-items').appendChild(div);
 }
 
 function removeDiagItem(id){
@@ -4936,6 +4974,50 @@ document.addEventListener('click',function(e){
     if(!e.target.closest(`#${box.id}`)&&!e.target.closest('input'))box.style.display='none';
   });
 });
+// ═══ CIE-10 COMPLETO (carga desde CSV) ═══
+function cie10Init(){
+try{const s=localStorage.getItem('oa3_cie10full');if(s)CIE10_FULL=JSON.parse(s);}catch(e){}
+}
+function cie10Cargar(){
+const input=document.createElement('input');
+input.type='file';input.accept='.csv,.txt';
+input.onchange=e=>{
+const f=e.target.files[0];if(!f)return;
+const reader=new FileReader();
+reader.onload=ev=>{
+const rows=parseCSV_CIE10(String(ev.target.result));
+if(!rows.length){alert('No se encontraron códigos válidos en el CSV.');return;}
+CIE10_FULL=rows;
+try{localStorage.setItem('oa3_cie10full',JSON.stringify(rows));}catch(e){/*si no cabe, queda en memoria*/}
+alert('✓ CIE-10 cargado: '+rows.length+' códigos listos para buscar.');
+showPage('configuracion');
+};
+reader.readAsText(f);
+};
+input.click();
+}
+function splitCSVLine(line,delim){
+const out=[];let cur='';let inQ=false;
+for(let i=0;i<line.length;i++){const ch=line[i];
+if(inQ){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=ch;}
+else{if(ch==='"')inQ=true;else if(ch===delim){out.push(cur);cur='';}else cur+=ch;}}
+out.push(cur);return out;
+}
+function parseCSV_CIE10(text){
+const lines=text.split(/\r?\n/).filter(l=>l.trim());
+const out=[];
+for(const line of lines){
+let delim=',';if(line.includes(';'))delim=';';else if(line.includes('\t'))delim='\t';
+const p=splitCSVLine(line,delim);
+if(p.length<2)continue;
+let cod=p[0].trim().toUpperCase().replace(/"/g,'');
+let desc=p[1].trim().replace(/"/g,'');
+if(!cod||!desc)continue;
+if(/c[oó]digo/i.test(cod)&&/descripci/i.test(desc))continue; // salta encabezado
+out.push([cod,desc]);
+}
+return out;
+}
 
 // ═══ RECETAS MSP ECUADOR ═══
 let MEDICAMENTOS_COMUNES=[
@@ -5114,25 +5196,24 @@ div.querySelector('span').focus();
 }
 
 function saveReceta(){
-  const diagnosticos=[];
-document.querySelectorAll('[id^="diag-item-"]').forEach(row=>{
-const codEl=row.querySelector('input[id^="dcie_"]');
-const descEl=row.querySelector('input[id^="ddesc_"]');
-const cod=(codEl?codEl.value:'').trim().toUpperCase();
-const desc=(descEl?descEl.value:'').trim();
+const diagnosticos=[];
+document.querySelectorAll('#diag-items > div').forEach(row=>{
+const ci=row.querySelector('input[id^="dcie_"]');
+const di=row.querySelector('input[id^="ddesc_"]');
+const cod=(ci&&ci.value?ci.value.trim().toUpperCase():'');
+const desc=(di&&di.value?di.value.trim():'');
 if(cod||desc)diagnosticos.push({cod:cod,desc:desc});
 });
-  const meds=[];
-  document.querySelectorAll('[id^="med-item-"]').forEach(row=>{
-    const id=row.id.replace('med-item-','');
-    const nombre=document.getElementById(`mn_${id}`)?.value?.trim();
-    if(!nombre)return;
-    meds.push({nombre,formaFarmaceutica:document.getElementById(`mff_${id}`)?.value||'',concentracion:document.getElementById(`mc_${id}`)?.value||'',via:document.getElementById(`mv_${id}`)?.value||'Oral',cantidadNum:document.getElementById(`mqn_${id}`)?.value||'',cantidadLetras:document.getElementById(`mql_${id}`)?.value||'',dosis:document.getElementById(`md_${id}`)?.value||'',frecuencia:document.getElementById(`mf_${id}`)?.value||'',duracion:document.getElementById(`mdu_${id}`)?.value||''});
-  });
-  if(!meds.length){alert('Agrega al menos un medicamento');return;}
-  if(!curPt.recetas)curPt.recetas=[];
-  curPt.recetas.push({id:nextRecetaId++,fecha:v('f_rdate'),tipo:v('f_rtipo')||'agudo',medico:v('f_rmed'),especialidad:v('f_resp'),registro:v('f_rreg'),hc:v('f_rhc'),diagnosticos,cie10cod:diagnosticos[0]?.cod||'',diagnostico:diagnosticos[0]?.desc||'',indicaciones:v('f_rind'),medicamentos:meds,paciente:curPt.name,cedula:curPt.cedula,edad:calcAge(curPt.birthdate)});
-  save();closeModal();medItemCount=0;diagItemCount=0;renderTab();
+const meds=[];
+document.querySelectorAll('#med-items > div').forEach(row=>{
+const nombre=(row.querySelector('input[id^="mn_"]')?.value||'').trim();
+if(!nombre)return;
+meds.push({nombre,formaFarmaceutica:row.querySelector('select[id^="mff_"]')?.value||'',concentracion:row.querySelector('input[id^="mc_"]')?.value||'',via:row.querySelector('select[id^="mv_"]')?.value||'Oral',cantidadNum:row.querySelector('input[id^="mqn_"]')?.value||'',cantidadLetras:row.querySelector('input[id^="mql_"]')?.value||'',dosis:row.querySelector('input[id^="md_"]')?.value||'',frecuencia:row.querySelector('select[id^="mf_"]')?.value||'',duracion:row.querySelector('input[id^="mdu_"]')?.value||''});
+});
+if(!meds.length){alert('Agrega al menos un medicamento');return;}
+if(!curPt.recetas)curPt.recetas=[];
+curPt.recetas.push({id:nextRecetaId++,fecha:v('f_rdate'),tipo:v('f_rtipo')||'agudo',medico:v('f_rmed'),especialidad:v('f_resp'),registro:v('f_rreg'),hc:v('f_rhc'),diagnosticos,cie10cod:diagnosticos[0]?.cod||'',diagnostico:diagnosticos[0]?.desc||'',indicaciones:v('f_rind'),medicamentos:meds,paciente:curPt.name,cedula:curPt.cedula,edad:calcAge(curPt.birthdate)});
+save();closeModal();medItemCount=0;diagItemCount=0;renderTab();
 }
 
 function verReceta(id){
@@ -6560,6 +6641,8 @@ ${btns.length?`<div class="ptw-alerts-inline">${btns.join('')}</div>`:''}
 // ═══ INIT ═══
 load();
 loadMeds();
+cie10Init();
+loadCIE10Full();
 loadQuickAppts();
 sbLoadConfig();
 if(sbUrl&&sbKey){ sbInit(); updateSbBtn('✓ Supabase conectado','#3ecf8e'); }
