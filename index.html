@@ -4331,7 +4331,7 @@ function renderConfiguracion(){
       <div class="form-row form-full"><div class="form-group"><label>Profesional a cargo</label><input id="cfg_lprof" value="${document.getElementById('logoProfesional').textContent}" placeholder="Dr. Nombre Apellido"></div></div>
       <div class="form-row"><div class="form-group"><label>RUC</label><input id="cfg_ruc" value="${clinicaRUC}" placeholder="1712345678001"></div><div class="form-group"><label>Teléfono</label><input id="cfg_tel" value="${clinicaTelefono}" placeholder="02-234-5678"></div></div>
       <div class="form-row form-full"><div class="form-group"><label>Dirección</label><input id="cfg_dir" value="${clinicaDireccion}" placeholder="Av. Principal 123, Quito"></div></div>
-<div class="form-row"><div class="form-group"><label>🔢 Próximo N° de receta</label><input id="cfg_recnum" type="number" min="1" value="${nextRecetaId}"><div style="font-size:10px;color:var(--text3);margin-top:3px">La próxima receta llevará este número y las siguientes continuarán la secuencia. Ej: si tu última receta física fue la 850, escribe 851.</div></div></div>
+      <div class="form-row"><div class="form-group"><label>🔢 Próximo N° de receta</label><input id="cfg_recnum" type="number" min="1" value="${nextRecetaId}"><div style="font-size:10px;color:var(--text3);margin-top:3px">La próxima receta llevará este número y las siguientes continuarán la secuencia. Ej: si tu última receta física fue la 850, escribe 851.</div></div></div>
       <div class="form-row form-full"><div class="form-group">
         <label>🌐 Zona horaria</label>
         <select id="cfg_tz">
@@ -4370,7 +4370,7 @@ function renderConfiguracion(){
     </div>
 
     <div class="card">
-      <div class="card-title">🎨 Logo y apariencia</div>
+      <div class="card-title"> Logo y apariencia</div>
       <div class="form-row">
         <div class="form-group">
           <label>Logo del consultorio</label>
@@ -4431,12 +4431,13 @@ function renderConfiguracion(){
         <button onclick="agregarMedCfg()" class="btn-primary">+ Agregar</button>
       </div>
     </div>
-<div class="card">
-<div class="card-title">📚 CIE-10 completo (autocompletar)</div>
-<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Importa una vez el listado oficial en español (CSV) y el autocompletador de diagnósticos buscará entre todos los códigos, sin conexión.</div>
-<button class="btn-primary" onclick="importarCIE10()">📥 Importar CIE-10 (CSV)</button>
-<span id="cie10count" style="font-size:11px;color:var(--text3);margin-left:8px"></span>
-</div>
+
+    <div class="card">
+      <div class="card-title"> CIE-10 completo</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Carga el CSV oficial CIE-10 para buscar cualquier enfermedad. ${cieN?`<strong style="color:var(--green)">✓ ${cieN} códigos cargados.</strong>`:'Aún sin CSV (usando lista odontológica). '}</div>
+      <button class="btn-primary" onclick="cie10Cargar()">📥 Cargar CSV CIE-10</button>
+    </div>
+
     <div class="card">
       <div class="card-title">📱 Mensaje recordatorio WhatsApp</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Variables: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{nombre}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{fecha}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{hora}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{motivo}</code> <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{clinica}</code></div>
@@ -4444,23 +4445,19 @@ function renderConfiguracion(){
       <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-primary" onclick="guardarWAMsg(event)">💾 Guardar mensaje</button></div>
     </div>
 
- 
-  <div class="card">
-<div class="card-title">📚 CIE-10 completo</div>
-<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Carga el CSV oficial CIE-10 para buscar cualquier enfermedad. ${cieN?`<strong style="color:var(--green)">✓ ${cieN} códigos cargados.</strong>`:'Aún sin CSV (usando lista odontológica). '}</div>
-<button class="btn-primary" onclick="cie10Cargar()">📥 Cargar CSV CIE-10</button>
-</div>
-<div class="card-title">💾 Medidor de almacenamiento</div>
-<div id="storage-meter" style="font-size:12px;color:var(--text3)">Midiendo…</div>
-</div>
-<div class="card" style="border:1px solid #fca5a5">
-<div class="card-title" style="color:var(--red)">⚠️ Zona de peligro</div>
+    <div class="card">
+      <div class="card-title">💾 Medidor de almacenamiento</div>
+      <div id="storage-meter" style="font-size:12px;color:var(--text3)">Midiendo…</div>
+    </div>
+
+    <div class="card" style="border:1px solid #fca5a5">
+      <div class="card-title" style="color:var(--red)">⚠️ Zona de peligro</div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Esta acción es irreversible. Descarga un backup antes de proceder.</div>
       <button onclick="factoryReset()" style="padding:12px 24px;background:#ef4444;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🗑 Restablecer app a valores de fábrica</button>
     </div>
+
   </div>`;
 }
-
 function guardarClinica(e){
   const n=document.getElementById('cfg_ln')?.value?.trim();
   const prof=document.getElementById('cfg_lprof')?.value?.trim();
@@ -7003,8 +7000,13 @@ ${btnsHtml ? `<div class="ptw-alerts-inline">${btnsHtml}</div>` : ''}
 
 // ═══ INIT ═══
 load();
-// Activar backup automático diario (si hay Supabase conectado)
-setTimeout(() => verificarBackupDiario(), 3000); // Espera 3 segundos para no ralentizar el inicio
+// Activar backup automático diario (3 segundos después de cargar)
+setTimeout(() => {
+    if (typeof verificarBackupDiario === 'function') {
+        verificarBackupDiario();
+        console.log('✅ Backup automático activado');
+    }
+}, 3000);
 loadMeds();
 cie10Init();
 loadCIE10Full();
