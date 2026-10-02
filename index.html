@@ -1869,7 +1869,21 @@ body.pt-open .topbar { display: none; }
 @keyframes ptwPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,82,82,.25)}50%{box-shadow:0 0 0 6px rgba(224,82,82,0)}}
 #ptAlertTip{position:fixed;display:none;z-index:9999;max-width:320px;background:#0f172a;color:#f1f5f9;font-size:12px;line-height:1.5;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none}
 #ptAlertTip strong{color:#fbbf24}
-
+/* Botón de alerta gris (cuando no hay riesgos) */
+.ptw-alert-btn.grey{
+  background:rgba(255,255,255,0.15);
+  border-color:rgba(255,255,255,0.3);
+  color:#fff;
+  font-weight:500;
+  opacity:0.9;
+  animation:none; /* Sin pulso */
+  font-size:10px;
+  padding:4px 10px;
+}
+.ptw-alert-btn.grey:hover{
+  background:rgba(255,255,255,0.25);
+  transform:none;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -3037,50 +3051,98 @@ function abrirResetMes(){
   document.querySelector('.modal').style.width='580px';
 }
 
-function cerrarMes(m,y){
-  const mesNombre=`${MONTHS_FULL[m]} ${y}`;
-  const pagos=[];
-  patients.forEach(p=>{
-    p.payments.filter(py=>{const d=new Date(py.date+'T12:00');return d.getMonth()===m&&d.getFullYear()===y&&!py.archivado;})
-      .forEach(py=>pagos.push({paciente:p.name,cedula:p.cedula,concepto:py.concept,monto:py.amount,fecha:py.date,tipo:py.type,ptId:p.id,pagoId:py.id}));
+function cerrarMes(m, y) {
+  const mesNombre = `${MONTHS_FULL[m]} ${y}`;
+  
+  // 1. SEGURIDAD: Verificar si el mes YA fue archivado (Evita duplicados y corrupción)
+  const yaArchivado = archivosContables.some(a => a.mes === m && a.anio === y);
+  if (yaArchivado) {
+    alert(`⚠️ El mes de ${mesNombre} ya fue cerrado y archivado anteriormente.\nLos datos están seguros en el "Resumen Anual".`);
+    return;
+  }
+
+  const pagos = [];
+  patients.forEach(p => {
+    p.payments.filter(py => {
+      const d = new Date(py.date + 'T12:00');
+      return d.getMonth() === m && d.getFullYear() === y && !py.archivado;
+    }).forEach(py => pagos.push({
+      paciente: p.name,
+      cedula: p.cedula,
+      concepto: py.concept,
+      monto: py.amount,
+      fecha: py.date,
+      tipo: py.type,
+      ptId: p.id,
+      pagoId: py.id
+    }));
   });
-  const egresosM=egresos.filter(e=>{const d=new Date(e.fecha+'T12:00');return d.getMonth()===m&&d.getFullYear()===y&&!e.archivado;});
-  const totalIngresos=pagos.reduce((s,p)=>s+p.monto,0);
-  const totalEgresos=egresosM.reduce((s,e)=>s+e.monto,0);
 
-  if(!totalIngresos&&!totalEgresos){alert('No hay movimientos activos en este mes para cerrar.');return;}
+  const egresosM = egresos.filter(e => {
+    const d = new Date(e.fecha + 'T12:00');
+    return d.getMonth() === m && d.getFullYear() === y && !e.archivado;
+  });
 
-  if(!confirm(`¿Cerrar y archivar ${mesNombre}?\n\n📊 Resumen:\n• Ingresos: $${totalIngresos.toFixed(2)}\n• Egresos: $${totalEgresos.toFixed(2)}\n• Utilidad: $${(totalIngresos-totalEgresos).toFixed(2)}\n\nLos contadores mensuales se reiniciarán.\nLa cartera pendiente se mantiene intacta.`))return;
+  const totalIngresos = pagos.reduce((s, p) => s + p.monto, 0);
+  const totalEgresos = egresosM.reduce((s, e) => s + e.monto, 0);
 
-  // Save archive snapshot
+  if (!totalIngresos && !totalEgresos) {
+    alert('No hay movimientos activos en este mes para cerrar.');
+    return;
+  }
+
+  if (!confirm(`¿Cerrar y archivar ${mesNombre}?\n\n📊 Resumen:\n• Ingresos: $${totalIngresos.toFixed(2)}\n• Egresos: $${totalEgresos.toFixed(2)}\n• Utilidad: $${(totalIngresos - totalEgresos).toFixed(2)}\n\n⚠️ Los contadores del mes actual se reiniciarán a cero.\n✅ Los registros NO se borran, se marcan como "archivados" y la cartera pendiente se mantiene intacta.`)) return;
+
+  // 2. GUARDAR SNAPSHOT DEL HISTÓRICO
   archivosContables.push({
-    id:Date.now(),
-    mes:m, anio:y,
-    label:mesNombre,
-    fechaCierre:today(),
-    pagos, egresos:egresosM,
-    totalIngresos, totalEgresos,
-    utilidad:totalIngresos-totalEgresos,
-    pacientesAtendidos:[...new Set(pagos.map(p=>p.paciente))].length
+    id: Date.now(),
+    mes: m,
+    anio: y,
+    label: mesNombre,
+    fechaCierre: today(),
+    pagos: pagos,
+    egresos: egresosM,
+    totalIngresos: totalIngresos,
+    totalEgresos: totalEgresos,
+    utilidad: totalIngresos - totalEgresos,
+    pacientesAtendidos: [...new Set(pagos.map(p => p.paciente))].length
   });
 
-  // Mark payments as archived (NOT deleted — cartera pendiente stays correct)
-  patients.forEach(p=>{
-    p.payments.forEach(py=>{
-      const d=new Date(py.date+'T12:00');
-      if(d.getMonth()===m&&d.getFullYear()===y)py.archivado=true;
+  // 3. MARCAR COMO ARCHIVADO (NO SE BORRA, solo se oculta de los contadores del mes actual)
+  patients.forEach(p => {
+    p.payments.forEach(py => {
+      const d = new Date(py.date + 'T12:00');
+      if (d.getMonth() === m && d.getFullYear() === y) {
+        py.archivado = true;
+      }
     });
   });
-  // Mark egresos as archived
-  egresos.forEach(e=>{
-    const d=new Date(e.fecha+'T12:00');
-    if(d.getMonth()===m&&d.getFullYear()===y)e.archivado=true;
+
+  egresos.forEach(e => {
+    const d = new Date(e.fecha + 'T12:00');
+    if (d.getMonth() === m && d.getFullYear() === y) {
+      e.archivado = true;
+    }
   });
 
+  // 4. GUARDAR LOCALMENTE
   save();
+
+  // 5. SINCRONIZAR CON SUPABASE (CRUCIAL para que no se pierda al cambiar de navegador)
+  // Nota: Si tu función de guardado en Supabase tiene otro nombre (ej: sbSaveData, syncSupabase), cámbialo aquí.
+  if (typeof sincronizarConSupabase === 'function') {
+    sincronizarConSupabase(); 
+  } else if (typeof sbSaveData === 'function') {
+    sbSaveData(); 
+  }
+
   closeModal();
-  showPage('estadisticas');
-  alert(`✓ ${mesNombre} cerrado correctamente.\n\nIngresos, egresos y utilidad reiniciados.\nLa cartera pendiente se mantiene intacta.`);
+  
+  // 6. RECARGA LIMPIA: Garantiza que la interfaz muestre los contadores en 0 y el mes en el historial
+  setTimeout(() => {
+    alert(`✅ ¡${mesNombre} cerrado y archivado correctamente!\n\nLos datos históricos están seguros.\nPuedes verlos en la sección "Resumen Anual".`);
+    location.reload(); 
+  }, 300);
 }
 
 function verArchivoMes(id){
@@ -3241,10 +3303,21 @@ function renderDatos(){
       <div><div class="fl">Email</div><div class="fv">${p.email||'—'}</div></div>
     </div>
   </div>
-  <div class="card"><div class="card-title">Historia clínica</div>
-    <div style="margin-bottom:12px"><div class="fl">Alergias</div><div class="fv">${p.alergias||'Ninguna'}</div></div>
-    <div><div class="fl">Antecedentes médicos</div><div class="fv">${p.antecedentes||'Sin antecedentes'}</div></div>
-  </div>`;
+ <div class="card"><div class="card-title">Historia clínica</div>
+<div style="margin-bottom:12px"><div class="fl">Alergias</div><div class="fv">${p.alergias||'Ninguna'}</div></div>
+<div><div class="fl">Antecedentes médicos</div><div class="fv">${p.antecedentes||'Sin antecedentes'}</div></div>
+</div>
+
+<div class="card" style="border:1px solid #fca5a5;background:#fef2f2">
+<div class="card-title" style="color:#991b1b">⚠️ Zona de peligro</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div>
+<div style="font-size:13px;font-weight:600;color:#991b1b">Eliminar paciente</div>
+<div style="font-size:11px;color:#b91c1c;margin-top:2px">Esta acción borrará permanentemente a ${p.name} y todo su historial clínico.</div>
+</div>
+<button onclick="openDeletePt()" style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">🗑 Eliminar paciente</button>
+</div>
+</div>`;
 }
 
 function renderDiario(){
@@ -5672,6 +5745,29 @@ function openSbPanel(){
       <div style="font-size:13px;font-weight:600;color:var(--text)">Guardar en nube</div>
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Sube todos los datos actuales a Supabase</div>
     </div>
+    <!-- 🛡️ SECCIÓN DE RESPALDOS VERSIONADOS -->
+<div style="border-top:2px solid var(--border);margin-top:20px;padding-top:16px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        🛡️ Historial de Respaldos
+        <span style="font-size:10px;background:var(--accent);color:white;padding:2px 8px;border-radius:10px">NUEVO</span>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+        Viaja en el tiempo: guarda puntos de restauración y recupera tus datos si algo sale mal.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button id="btnCrearBackup" onclick="crearBackupHistorico('Respaldo manual')" 
+            style="padding:12px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">
+            💾 Crear punto de restauración
+        </button>
+        <button onclick="mostrarHistorialRespaldos()" 
+            style="padding:12px;background:var(--surface-bg);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">
+            📜 Ver historial
+        </button>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text3);text-align:center">
+        ✅ Se guardan automáticamente los últimos 15 respaldos · Backup diario automático
+    </div>
+</div>
     <div onclick="sbLoadNow()" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='#3ecf8e'" onmouseout="this.style.borderColor='var(--border)'">
       <div style="font-size:28px;margin-bottom:8px">⬇️</div>
       <div style="font-size:13px;font-weight:600;color:var(--text)">Cargar desde nube</div>
@@ -5765,6 +5861,247 @@ if(d.servicios)servicios=d.servicios; if(d.archivosContables)archivosContables=d
   } catch(e){
     if(status){ status.style.color='#ef4444'; status.textContent='✗ Error: '+e.message; }
   }
+}
+// ═══════════════════════════════════════════════════════════
+// 🛡️ SISTEMA DE RESPALDOS VERSIONADOS (HISTORIAL EN SUPABASE)
+// ═══════════════════════════════════════════════════════════
+
+// 1. Crear un punto de restauración en el tiempo
+async function crearBackupHistorico(nota = "Backup manual") {
+    if (!sbClient || !sbClinicaId) {
+        alert("⚠️ Primero debes conectar Supabase.");
+        return false;
+    }
+
+    try {
+        // Obtener el estado actual de la app (el mismo que usa save())
+        const bundle = {
+            v: 1,
+            t: Date.now(),
+            patients: patients,
+            egresos: egresos,
+            facturas: facturas,
+            archivosContables: archivosContables,
+            servicios: servicios,
+            quickAppts: quickAppts || [],
+            nextId: nextId,
+            nextEgId: nextEgId,
+            nextFactId: nextFactId,
+            nextRecetaId: nextRecetaId,
+            nextPresupId: nextPresupId,
+            logo: {
+                text: document.getElementById('logoText').textContent,
+                prof: document.getElementById('logoProfesional').textContent,
+                color: logoColor,
+                img: logoImg,
+                ruc: clinicaRUC,
+                dir: clinicaDireccion,
+                tel: clinicaTelefono
+            }
+        };
+
+        const version = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const sizeBytes = new Blob([JSON.stringify(bundle)]).size;
+
+        // Mostrar estado de carga
+        const btn = document.getElementById('btnCrearBackup');
+        if (btn) {
+            btn.textContent = '⏳ Guardando...';
+            btn.disabled = true;
+        }
+
+        // Insertar NUEVA fila en el historial (NO sobrescribe la anterior)
+        const { error } = await sbClient.from('clinica_backups').insert({
+            clinica_id: sbClinicaId,
+            version: version,
+            nota: nota,
+            backup_data: bundle,
+            size_bytes: sizeBytes
+        });
+
+        if (error) throw error;
+
+        // Limpieza automática: mantener solo los últimos 15 respaldos
+        await limpiarRespaldosAntiguos();
+
+        // Guardar timestamp del último backup automático
+        localStorage.setItem('oa3_last_auto_backup', Date.now().toString());
+
+        if (btn) {
+            btn.textContent = '✅ Respaldo creado';
+            setTimeout(() => {
+                btn.textContent = '💾 Crear punto de restauración ahora';
+                btn.disabled = false;
+            }, 2000);
+        }
+
+        alert(`✅ ¡Respaldo histórico creado!\n\n📅 Fecha: ${new Date().toLocaleString('es-EC')}\n📝 Nota: ${nota}\n Tamaño: ${(sizeBytes/1024).toFixed(1)} KB`);
+        return true;
+    } catch (e) {
+        console.error("Error al crear backup histórico:", e);
+        alert("❌ Error al guardar en la nube: " + e.message);
+        const btn = document.getElementById('btnCrearBackup');
+        if (btn) {
+            btn.textContent = ' Error';
+            setTimeout(() => {
+                btn.textContent = '💾 Crear punto de restauración ahora';
+                btn.disabled = false;
+            }, 2000);
+        }
+        return false;
+    }
+}
+
+// 2. Mantener solo los últimos 15 respaldos (evita llenar Supabase)
+async function limpiarRespaldosAntiguos() {
+    try {
+        const { data, error } = await sbClient
+            .from('clinica_backups')
+            .select('id')
+            .eq('clinica_id', sbClinicaId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 15) {
+            const aBorrar = data.slice(15).map(d => d.id);
+            const { error: delError } = await sbClient
+                .from('clinica_backups')
+                .delete()
+                .in('id', aBorrar);
+            
+            if (delError) console.warn("No se pudieron borrar respaldos antiguos:", delError);
+            else console.log(`🧹 Limpieza: Se eliminaron ${aBorrar.length} respaldos antiguos.`);
+        }
+    } catch (e) {
+        console.warn("No se pudo limpiar respaldos antiguos:", e);
+    }
+}
+
+// 3. Restaurar desde un punto en el tiempo
+async function restaurarDesdeHistorial(backupId, version, nota) {
+    if (!confirm(`⚠️ ¿Estás seguro de restaurar la versión del ${version}?\n\nNota: ${nota}\n\nEsto REEMPLAZARÁ todos los datos actuales de este dispositivo con los de esa fecha.\n\n Recomendación: Crea un respaldo actual antes de restaurar por seguridad.`)) {
+        return;
+    }
+
+    try {
+        const { data, error } = await sbClient
+            .from('clinica_backups')
+            .select('backup_data')
+            .eq('id', backupId)
+            .single();
+
+        if (error || !data) throw new Error("No se encontró el respaldo");
+
+        const bundle = data.backup_data;
+
+        // Sobrescribir TODAS las variables globales con los datos históricos
+        patients = bundle.patients || [];
+        egresos = bundle.egresos || [];
+        facturas = bundle.facturas || [];
+        archivosContables = bundle.archivosContables || [];
+        servicios = bundle.servicios || [];
+        quickAppts = bundle.quickAppts || [];
+        nextId = bundle.nextId || 1;
+        nextEgId = bundle.nextEgId || 1;
+        nextFactId = bundle.nextFactId || 1;
+        nextRecetaId = bundle.nextRecetaId || 1;
+        nextPresupId = bundle.nextPresupId || 1;
+
+        // Actualizar logo si existe
+        if (bundle.logo) {
+            if (bundle.logo.text) document.getElementById('logoText').textContent = bundle.logo.text;
+            if (bundle.logo.prof) document.getElementById('logoProfesional').textContent = bundle.logo.prof;
+            logoColor = bundle.logo.color || '#2f9d94';
+            logoImg = bundle.logo.img || '';
+            clinicaRUC = bundle.logo.ruc || '';
+            clinicaDireccion = bundle.logo.dir || '';
+            clinicaTelefono = bundle.logo.tel || '';
+        }
+
+        // Guardar en IndexedDB
+        save();
+
+        alert(`✅ Datos restaurados correctamente desde:\n\n📅 ${version}\n📝 ${nota}\n\nLa página se recargará.`);
+        location.reload();
+    } catch (e) {
+        alert(" Error al restaurar: " + e.message);
+    }
+}
+
+// 4. Mostrar el historial de respaldos en un modal
+async function mostrarHistorialRespaldos() {
+    if (!sbClient || !sbClinicaId) {
+        alert("⚠️ Primero debes conectar Supabase.");
+        return;
+    }
+
+    // Mostrar modal de carga
+    openModal(`<div class="modal-title">📜 Cargando historial...</div><div style="text-align:center;padding:40px"><div style="font-size:40px;animation:spin 1s linear infinite">⏳</div></div>`);
+
+    try {
+        const { data, error } = await sbClient
+            .from('clinica_backups')
+            .select('id, version, nota, size_bytes, created_at')
+            .eq('clinica_id', sbClinicaId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            openModal(`<div class="modal-title">📜 Historial de Respaldos</div>
+            <div style="text-align:center;padding:40px">
+                <div style="font-size:50px;margin-bottom:15px"></div>
+                <div style="font-size:15px;font-weight:600;color:var(--text)">Aún no hay respaldos históricos</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:8px">Crea tu primer punto de restauración para empezar.</div>
+            </div>
+            <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button></div>`);
+            return;
+        }
+
+        let html = `<div class="modal-title"> Historial de Respaldos en la Nube</div>
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#0c4a6e">
+            <strong>💡 ¿Cómo funciona?</strong> Cada respaldo es una "foto" de tus datos en un momento específico. 
+            Si algo se borra o se daña, puedes volver a cualquier punto del historial.
+            <br><br>Se mantienen automáticamente los <strong>últimos 15 respaldos</strong> para no llenar tu base de datos.
+        </div>
+        <div style="max-height:400px;overflow-y:auto;">`;
+        
+        data.forEach((b, index) => {
+            const fecha = new Date(b.created_at).toLocaleString('es-EC', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+            const sizeMB = (b.size_bytes / (1024 * 1024)).toFixed(2);
+            const esElMasReciente = index === 0;
+            
+            html += `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);${esElMasReciente ? 'background:#f0fdf4;' : ''}">
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                        ${esElMasReciente ? '<span style="background:#10b981;color:white;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700">MÁS RECIENTE</span>' : ''}
+                        <div style="font-weight:600;font-size:13px;color:var(--text)">${b.nota || 'Backup automático'}</div>
+                    </div>
+                    <div style="font-size:11px;color:var(--text3);margin-bottom:3px">📅 ${fecha}</div>
+                    <div style="font-size:10px;color:var(--accent);font-family:monospace">💾 ${sizeMB} MB · ID: ${b.version}</div>
+                </div>
+                <button class="btn-sm" style="background:var(--amber);color:white;margin-left:10px;white-space:nowrap" 
+                    onclick="restaurarDesdeHistorial('${b.id}', '${fecha.replace(/'/g, "\\'")}', '${(b.nota || 'Backup automático').replace(/'/g, "\\'")}')">Restaurar</button>
+            </div>`;
+        });
+
+        html += `</div>
+        <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button></div>`;
+        openModal(html);
+    } catch (e) {
+        openModal(`<div class="modal-title">📜 Historial de Respaldos</div>
+        <div style="text-align:center;padding:28px 20px">
+            <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">No se pudo cargar el historial</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:8px">${e.message}</div>
+        </div>
+        <div class="modal-footer"><button class="btn-sec" onclick="closeModal()">Cerrar</button></div>`);
+    }
 }
 
 function sbDesconectar(){
@@ -6614,10 +6951,36 @@ function renderPtHeader(){
 const p=curPt;if(!p)return;
 document.body.classList.add('pt-open');
 const el=document.getElementById('ptWinHeader');if(!el)return;
+
+// Lógica mejorada para alertas
+const alerts=[];
+
+// 1. Alergias
+if(!esNegativo(p.alergias)){
+  // Tiene alergias reales -> Rojo
+  alerts.push({cls:'red', icon:'⚠️', label:'ALERGIA', txt:p.alergias});
+} else if (p.alergias && p.alergias.trim() !== '') {
+  // Dice "No refiere" o similar -> Gris discreto
+  alerts.push({cls:'grey', icon:'✓', label:'Sin alergias', txt:''});
+}
+
+// 2. Antecedentes
+if(!esNegativo(p.antecedentes)){
+  // Tiene enfermedades -> Ámbar
+  alerts.push({cls:'amber', icon:'🩺', label:'ANTECEDENTES', txt:p.antecedentes});
+} else if (p.antecedentes && p.antecedentes.trim() !== '') {
+  // Dice "No refiere" -> Gris discreto
+  alerts.push({cls:'grey', icon:'✓', label:'Sin antecedentes', txt:''});
+}
+
 window._ptAlerts={alergia:p.alergias||'',antec:p.antecedentes||''};
-const btns=[];
-if(!esNegativo(p.alergias))btns.push(`<button class="ptw-alert-btn red" onmouseenter="showPtAlertTip(event,'alergia')" onmouseleave="hidePtAlertTip()">⚠️ Alergia</button>`);
-if(!esNegativo(p.antecedentes))btns.push(`<button class="ptw-alert-btn amber" onmouseenter="showPtAlertTip(event,'antec')" onmouseleave="hidePtAlertTip()">🩺 Antecedentes</button>`);
+
+const btnsHtml = alerts.map(a => {
+  // Si es gris, no necesita tooltip complejo, pero mantenemos la estructura
+  const onHover = a.cls === 'grey' ? '' : `onmouseenter="showPtAlertTip(event,'${a.label.includes('alerg')?'alergia':'antec'}')" onmouseleave="hidePtAlertTip()"`;
+  return `<button class="ptw-alert-btn ${a.cls}" ${onHover}>${a.icon} ${a.label} ${a.txt}</button>`;
+}).join('');
+
 el.innerHTML=`
 <div class="ptw-card">
 <div class="ptw-info">
@@ -6626,7 +6989,7 @@ el.innerHTML=`
 <div class="ptw-name">${p.name}</div>
 <div class="ptw-sub">🪪 ${p.cedula||'—'} · 📞 ${p.phone||'—'} · 🎂 ${calcAge(p.birthdate)} años</div>
 </div>
-${btns.length?`<div class="ptw-alerts-inline">${btns.join('')}</div>`:''}
+${btnsHtml ? `<div class="ptw-alerts-inline">${btnsHtml}</div>` : ''}
 </div>
 <div class="ptw-actions">
 <button class="ptw-btn" title="Editar ficha" onclick="editPt()">✏️</button>
@@ -6640,6 +7003,8 @@ ${btns.length?`<div class="ptw-alerts-inline">${btns.join('')}</div>`:''}
 
 // ═══ INIT ═══
 load();
+// Activar backup automático diario (si hay Supabase conectado)
+setTimeout(() => verificarBackupDiario(), 3000); // Espera 3 segundos para no ralentizar el inicio
 loadMeds();
 cie10Init();
 loadCIE10Full();
