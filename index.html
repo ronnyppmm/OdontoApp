@@ -305,6 +305,80 @@ body{font-family:'Manrope','Segoe UI',system-ui,-apple-system,sans-serif}
 .diary-alert{background:#e7f4f2;color:#0b5d54}
 .badge-amber{background:#e9e2d4;color:#6b5233}
 [contenteditable][data-ph]:empty:before{content:attr(data-ph);color:var(--text3);font-weight:500}
+/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+   🏷️ BADGES DE ALERTAS - Alergias y Antecedentes
+   ═══════════════════════════════════════════════════════ */
+
+/* Contenedor de badges en el header */
+.ptw-alerts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ═══ BADGES ELEGANTES TRANSPARENTES (FORZADO) ═══ */
+.ptw-alert-btn,
+.ptw-alert-btn.amber,
+.ptw-alert-btn.red,
+.ptw-alert-btn.grey {
+  padding: 6px 14px !important;
+  border-radius: 20px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  background: transparent !important;
+  color: white !important;
+  cursor: default !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  letter-spacing: 0.03em !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+.ptw-alert-btn:hover,
+.ptw-alert-btn.amber:hover,
+.ptw-alert-btn.red:hover,
+.ptw-alert-btn.grey:hover {
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.5) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Tooltip flotante */
+#ptAlertTip {
+  position: fixed;
+  background: #1e293b;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  z-index: 10000;
+  max-width: 320px;
+  line-height: 1.5;
+  pointer-events: none;
+  animation: tipFadeIn 0.15s ease-out;
+  display: none;
+}
+
+#ptAlertTip strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #fbbf24;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@keyframes tipFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -2299,10 +2373,75 @@ document.getElementById('ptWinHeader').innerHTML='';
 if(fns[page]) document.getElementById('mainContent').innerHTML=fns[page]();
 if(page==='configuracion')setTimeout(pintarMedidor,150);
 }
+// ═══ FUNCIONES AUXILIARES PARA ENCABEZADO ELEGANTE ═══
+function esNegativo(txt) {
+  if (!txt) return true;
+  const t = String(txt).toLowerCase().trim();
+  return t === 'no refiere' || t === 'no presenta' || t === 'ninguna' || t === 'no tiene' || t === '';
+}
 
-function selectPt(id){
+function showPtAlertTip(event, type) {
+  hidePtAlertTip();
+  const tip = document.createElement('div');
+  tip.id = 'ptAlertTip';
+  const text = type === 'alergia' ? (curPt.alergias || '') : (curPt.antecedentes || '');
+  const title = type === 'alergia' ? 'ALERGIAS' : 'ANTECEDENTES MÉDICOS';
+  
+  tip.innerHTML = `<strong>${title}</strong>${text}`;
+  document.body.appendChild(tip);
+
+  const rect = event.target.getBoundingClientRect();
+  tip.style.left = (rect.left + window.scrollX) + 'px';
+  tip.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+}
+
+function hidePtAlertTip() {
+  const tip = document.getElementById('ptAlertTip');
+  if (tip) tip.remove();
+}
+// ═══ FUNCIONES AUXILIARES PARA TOOLTIP ═══
+function esNegativo(txt) {
+  if (!txt) return true;
+  const t = String(txt).toLowerCase().trim();
+  return t === 'no refiere' || t === 'no presenta' || t === 'ninguna' || t === 'no tiene' || t === '';
+}
+
+function showPtAlertTip(ev, key) {
+  const d = window._ptAlerts || {};
+  const txt = key === 'alergia' ? d.alergia : d.antec;
+  if (!txt || esNegativo(txt)) return;
+  
+  let tip = document.getElementById('ptAlertTip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'ptAlertTip';
+    document.body.appendChild(tip);
+  }
+  
+  tip.innerHTML = key === 'alergia' 
+    ? `<strong>⚠️ ALERGIA:</strong> ${escHtml(txt)}` 
+    : `<strong>🩺 ANTECEDENTES:</strong> ${escHtml(txt)}`;
+  
+  tip.style.display = 'block';
+  const r = ev.currentTarget.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 328)) + 'px';
+  tip.style.top = (r.bottom + 10) + 'px';
+}
+
+function hidePtAlertTip() {
+  const tip = document.getElementById('ptAlertTip');
+  if (tip) tip.style.display = 'none';
+}
+
+// Función auxiliar para escapar HTML (si no existe)
+if (typeof escHtml !== 'function') {
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+}
+function selectPt(id) {
   const p = patients.find(x => x.id === id);
-  if(!p){
+  if (!p) {
     console.error(' Paciente no encontrado con ID:', id);
     return;
   }
@@ -2310,104 +2449,73 @@ function selectPt(id){
   curPt = p;
   curTab = 'datos';
   curPage = 'patient';
-  
-  // Calcular edad
-  const edad = p.birthdate ? calcAge(p.birthdate) : '—';
-  
-  // Iniciales para el avatar
-  const iniciales = p.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
-  
-  // Verificar alergias
-  const tieneAlergias = p.alergias && !esNegativo(p.alergias);
-  
-  // 1. Actualizar sidebar
-  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
-  renderSidebar();
-  
-  // 2. Generar el header con el formato original + botón de basurero (estilo unificado)
-  const ptWinHeader = document.getElementById('ptWinHeader');
-  if(ptWinHeader){
-    ptWinHeader.innerHTML = `
-      <div style="background:linear-gradient(135deg, var(--accent) 0%, #025f67 100%);color:white;padding:16px 24px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
-        
-        <!-- Lado izquierdo: Avatar + Info -->
-        <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0">
-          
-          <!-- Avatar circular con iniciales -->
-          <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0">
-            ${iniciales}
-          </div>
-          
-          <!-- Nombre y datos -->
-          <div style="min-width:0;flex:1">
-            <div style="font-size:20px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
-            <div style="font-size:12px;opacity:0.9;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span> ${p.cedula || 'Sin cédula'}</span>
+  document.body.classList.add('pt-open');
+
+  const el = document.getElementById('ptWinHeader');
+  if (el) {
+    const iniciales = p.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    const edad = p.birthdate ? calcAge(p.birthdate) : '—';
+    
+    const tieneAlergia = p.alergias && !esNegativo(p.alergias);
+    const tieneAntec = p.antecedentes && !esNegativo(p.antecedentes);
+
+    let badgesHtml = '';
+    if (tieneAlergia) {
+      badgesHtml += `<button class="ptw-alert-btn amber" onmouseenter="showPtAlertTip(event, 'alergia')" onmouseleave="hidePtAlertTip()">⚠️ ALERGIA</button>`;
+    }
+    if (tieneAntec) {
+      badgesHtml += `<button class="ptw-alert-btn amber" onmouseenter="showPtAlertTip(event, 'antec')" onmouseleave="hidePtAlertTip()"> ANTECEDENTES</button>`;
+    }
+
+    el.innerHTML = `
+      <div class="ptw-card">
+        <div class="ptw-info">
+          <div class="ptw-av">${iniciales}</div>
+          <div style="min-width:0">
+            <div class="ptw-name">${p.name}</div>
+            <div class="ptw-meta">
+              <span>🪪 ${p.cedula || 'Sin cédula'}</span>
               <span>·</span>
               <span>📞 ${p.phone || 'Sin teléfono'}</span>
               <span>·</span>
-              <span> ${edad} años</span>
+              <span>🎂 ${edad} años</span>
             </div>
           </div>
-          
-          <!-- Badge de alergias -->
-          ${tieneAlergias 
-            ? `<div style="background:#fee2e2;color:#991b1b;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:12px">️ Alergias</div>`
-            : `<div style="background:rgba(255,255,255,0.2);color:white;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:12px">✓ Sin alergias</div>`
-          }
         </div>
-        
-        <!-- Lado derecho: Botones de acción (TODOS con el mismo estilo) -->
-        <div style="display:flex;gap:8px;margin-left:16px">
-          
-          <!-- ✏️ Editar paciente -->
-          <button onclick="editPt()" title="Editar paciente" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            ✏️
-          </button>
-          
-          <!-- 📅 Agendar cita -->
-          <button onclick="openApptFromPt()" title="Agendar cita" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            📅
-          </button>
-          
-          <!-- 💳 Registrar pago -->
-          <button onclick="openPayFromPt()" title="Registrar pago" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            💳
-          </button>
-          
-          <!-- 💊 Emitir receta (CORREGIDO) -->
-          <button onclick="openNuevaReceta()" title="Emitir receta" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-  💊
-</button>
-          
-          <!-- 🗑️ Eliminar paciente (MISMO ESTILO que los demás) -->
-          <button onclick="openDeletePt()" title="Eliminar paciente" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            🗑️
-          </button>
-          
-          <!-- ✕ Cerrar ficha -->
-          <button onclick="showPage('dashboard')" title="Cerrar ficha" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            ✕
-          </button>
-          
+        ${badgesHtml ? `<div class="ptw-alerts-inline">${badgesHtml}</div>` : ''}
+        <div class="ptw-actions">
+          <button class="ptw-btn" title="Editar" onclick="editPt()">✏️</button>
+          <button class="ptw-btn" title="Cita" onclick="openAddAppt()">📅</button>
+          <button class="ptw-btn" title="Pago" onclick="openAddPay()">💳</button>
+          <button class="ptw-btn" title="Receta" onclick="openNuevaReceta()">💊</button>
+          <button class="ptw-btn" title="Eliminar" onclick="openDeletePt()">🗑️</button>
+          <button class="ptw-btn" title="Cerrar" onclick="showPage('dashboard')">✕</button>
         </div>
       </div>
     `;
   }
-  
-  // 3. Mostrar pestañas
-  const tabsBar = document.getElementById('tabsBar');
-  if(tabsBar) tabsBar.style.display = 'flex';
-  
-  // 4. Abrir la ventana del paciente
-  document.body.classList.add('pt-open');
-  
-  // 5. Renderizar contenido
-  if(typeof renderTab === 'function') renderTab();
-  
-  console.log('✅ Paciente abierto:', p.name, '(ID:', id + ')');
-}
 
+  const tabsBar = document.getElementById('tabsBar');
+  if (tabsBar) tabsBar.style.display = 'flex';
+
+  if (typeof renderTab === 'function') renderTab();
+  
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  if (typeof renderSidebar === 'function') renderSidebar();
+// Guardar datos para tooltips
+window._ptAlerts = { alergia: p.alergias || '', antec: p.antecedentes || '' };
+
+const tieneAlergia = p.alergias && !esNegativo(p.alergias);
+const tieneAntec = p.antecedentes && !esNegativo(p.antecedentes);
+
+let badgesHtml = '';
+if (tieneAlergia) {
+  badgesHtml += `<button class="ptw-alert-btn" onmouseenter="showPtAlertTip(event,'alergia')" onmouseleave="hidePtAlertTip()">⚠️ ALERGIA</button>`;
+}
+if (tieneAntec) {
+  badgesHtml += `<button class="ptw-alert-btn" onmouseenter="showPtAlertTip(event,'antec')" onmouseleave="hidePtAlertTip()">🩺 ANTECEDENTES</button>`;
+}
+}
 // Abrir modal de edición desde la barra superior
 function editPt(){
   const p = curPt;
@@ -3509,13 +3617,16 @@ function renderDatos(){
   const txT=p.treatments.reduce((a,t)=>a+t.cost,0);
   const paid=p.payments.reduce((a,py)=>a+py.amount,0);
   const deuda=Math.max(0,txT-paid);
+  
   return`
   <div class="grid3" style="margin-bottom:14px">
     <div class="kpi"><div class="kpi-label">Tratamientos realizados</div><div class="kpi-val" style="color:var(--accent)">${p.treatments.filter(t=>t.status==='realizado').length}</div></div>
     <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val" style="color:var(--amber)">${p.treatments.filter(t=>t.status==='pendiente').length}</div></div>
     <div class="kpi"><div class="kpi-label">Saldo pendiente</div><div class="kpi-val" style="color:${deuda>0?'var(--red)':'var(--green)'}">$${deuda}</div></div>
   </div>
-  <div class="card"><div class="card-title">Información personal</div>
+  
+  <div class="card">
+    <div class="card-title">Información personal</div>
     <div class="grid2">
       <div><div class="fl">Nombre completo</div><div class="fv">${p.name}</div></div>
       <div><div class="fl">Cédula / ID</div><div class="fv">${p.cedula}</div></div>
@@ -3525,21 +3636,12 @@ function renderDatos(){
       <div><div class="fl">Email</div><div class="fv">${p.email||'—'}</div></div>
     </div>
   </div>
- <div class="card"><div class="card-title">Historia clínica</div>
-<div style="margin-bottom:12px"><div class="fl">Alergias</div><div class="fv">${p.alergias||'Ninguna'}</div></div>
-<div><div class="fl">Antecedentes médicos</div><div class="fv">${p.antecedentes||'Sin antecedentes'}</div></div>
-</div>
-
-<div class="card" style="border:1px solid #fca5a5;background:#fef2f2">
-<div class="card-title" style="color:#991b1b">⚠️ Zona de peligro</div>
-<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-<div>
-<div style="font-size:13px;font-weight:600;color:#991b1b">Eliminar paciente</div>
-<div style="font-size:11px;color:#b91c1c;margin-top:2px">Esta acción borrará permanentemente a ${p.name} y todo su historial clínico.</div>
-</div>
-<button onclick="openDeletePt()" style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">🗑 Eliminar paciente</button>
-</div>
-</div>`;
+  
+  <div class="card">
+    <div class="card-title">Historia clínica</div>
+    <div style="margin-bottom:12px"><div class="fl">Alergias</div><div class="fv">${p.alergias||'Ninguna'}</div></div>
+    <div><div class="fl">Antecedentes médicos</div><div class="fv">${p.antecedentes||'Sin antecedentes'}</div></div>
+  </div>`;
 }
 
 function renderDiario(){
@@ -7199,58 +7301,85 @@ tip.style.left=Math.max(8,Math.min(r.left,window.innerWidth-328))+'px';
 tip.style.top=(r.bottom+10)+'px';
 }
 function hidePtAlertTip(){const tip=document.getElementById('ptAlertTip');if(tip)tip.style.display='none';}
+
 function renderPtHeader(){
-const p=curPt;if(!p)return;
-document.body.classList.add('pt-open');
-const el=document.getElementById('ptWinHeader');if(!el)return;
-
-// Lógica mejorada para alertas
-const alerts=[];
-
-// 1. Alergias
-if(!esNegativo(p.alergias)){
-  // Tiene alergias reales -> Rojo
-  alerts.push({cls:'red', icon:'⚠️', label:'ALERGIA', txt:p.alergias});
-} else if (p.alergias && p.alergias.trim() !== '') {
-  // Dice "No refiere" o similar -> Gris discreto
-  alerts.push({cls:'grey', icon:'✓', label:'Sin alergias', txt:''});
-}
-
-// 2. Antecedentes
-if(!esNegativo(p.antecedentes)){
-  // Tiene enfermedades -> Ámbar
-  alerts.push({cls:'amber', icon:'🩺', label:'ANTECEDENTES', txt:p.antecedentes});
-} else if (p.antecedentes && p.antecedentes.trim() !== '') {
-  // Dice "No refiere" -> Gris discreto
-  alerts.push({cls:'grey', icon:'✓', label:'Sin antecedentes', txt:''});
-}
-
-window._ptAlerts={alergia:p.alergias||'',antec:p.antecedentes||''};
-
-const btnsHtml = alerts.map(a => {
-  // Si es gris, no necesita tooltip complejo, pero mantenemos la estructura
-  const onHover = a.cls === 'grey' ? '' : `onmouseenter="showPtAlertTip(event,'${a.label.includes('alerg')?'alergia':'antec'}')" onmouseleave="hidePtAlertTip()"`;
-  return `<button class="ptw-alert-btn ${a.cls}" ${onHover}>${a.icon} ${a.label} ${a.txt}</button>`;
-}).join('');
-
-el.innerHTML=`
-<div class="ptw-card">
-<div class="ptw-info">
-<div class="ptw-av">${initials(p.name)}</div>
-<div style="min-width:0">
-<div class="ptw-name">${p.name}</div>
-<div class="ptw-sub">🪪 ${p.cedula||'—'} · 📞 ${p.phone||'—'} · 🎂 ${calcAge(p.birthdate)} años</div>
-</div>
-${btnsHtml ? `<div class="ptw-alerts-inline">${btnsHtml}</div>` : ''}
-</div>
-<div class="ptw-actions">
-<button class="ptw-btn" title="Editar ficha" onclick="editPt()">✏️</button>
-<button class="ptw-btn" title="Nueva cita" onclick="openAddAppt()">📅</button>
-<button class="ptw-btn" title="Registrar pago" onclick="openAddPay()">💳</button>
-<button class="ptw-btn" title="Nueva receta" onclick="openNuevaReceta()">💊</button>
-<button class="ptw-btn" title="Cerrar ficha" onclick="showPage('dashboard')">✕</button>
-</div>
-</div>`;
+  const p=curPt;
+  if(!p)return;
+  
+  document.body.classList.add('pt-open');
+  const el=document.getElementById('ptWinHeader');
+  if(!el)return;
+  
+  // Iniciales para avatar
+  const iniciales = p.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
+  
+  // Calcular edad
+  const edad = p.birthdate ? calcAge(p.birthdate) : '—';
+  
+  // Verificar si tiene alergias/antecedentes REALES (no "no refiere")
+  const tieneAlergiasReales = p.alergias && !esNegativo(p.alergias);
+  const tieneAntecedentesReales = p.antecedentes && !esNegativo(p.antecedentes);
+  
+  // Guardar para tooltips
+  window._ptAlerts={alergia:p.alergias||'',antec:p.antecedentes||''};
+  
+  // Construir badges SOLO si hay información real
+  let badgesHtml = '';
+  
+  if (tieneAlergiasReales) {
+    badgesHtml += `<button class="ptw-alert-btn amber" 
+      onmouseenter="showPtAlertTip(event,'alergia')" 
+      onmouseleave="hidePtAlertTip()"
+      style="cursor:default">
+      ⚠️ ALERGIA
+    </button>`;
+  }
+  
+  if (tieneAntecedentesReales) {
+    badgesHtml += `<button class="ptw-alert-btn amber" 
+      onmouseenter="showPtAlertTip(event,'antec')" 
+      onmouseleave="hidePtAlertTip()"
+      style="cursor:default">
+      🩺 ANTECEDENTES
+    </button>`;
+  }
+  
+  // Header completo
+  el.innerHTML=`
+    <div class="ptw-card">
+      <div class="ptw-info">
+        <div class="ptw-av">${iniciales}</div>
+        <div style="min-width:0">
+          <div class="ptw-name">${p.name}</div>
+          <div class="ptw-meta">
+            <span>🪪 ${p.cedula || 'Sin cédula'}</span>
+            <span>·</span>
+            <span>📞 ${p.phone || 'Sin teléfono'}</span>
+            <span>·</span>
+            <span>🎂 ${edad} años</span>
+          </div>
+        </div>
+      </div>
+      <div class="ptw-alerts">
+        ${badgesHtml}
+      </div>
+      <div class="ptw-actions">
+        <button class="ptw-btn" title="Editar paciente" onclick="editPt()">️</button>
+        <button class="ptw-btn" title="Nueva cita" onclick="openAddAppt()">📅</button>
+        <button class="ptw-btn" title="Registrar pago" onclick="openAddPay()">💳</button>
+        <button class="ptw-btn" title="Nueva receta" onclick="openNuevaReceta()">💊</button>
+        <button class="ptw-btn" title="Eliminar paciente" onclick="openDeletePt()">🗑️</button>
+        <button class="ptw-btn" title="Cerrar ficha" onclick="showPage('dashboard')">✕</button>
+      </div>
+    </div>
+  `;
+  
+  // Mostrar tabs
+  const tabsBar = document.getElementById('tabsBar');
+  if(tabsBar) tabsBar.style.display = 'flex';
+  
+  // Renderizar contenido
+  if(typeof renderTab === 'function') renderTab();
 }
 
 // ═══ INIT ═══
